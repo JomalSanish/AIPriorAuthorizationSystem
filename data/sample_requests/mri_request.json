@@ -1,0 +1,37 @@
+{
+  "submission_id": "SUB-72148",
+  "patient_info": {
+    "member_id": "M88231",
+    "first_name": "Jane",
+    "last_name": "Doe",
+    "date_of_birth": "1988-08-08"
+  },
+  "provider_info": {
+    "provider_id": "P-9004",
+    "name": "Dr. Grant",
+    "specialty": "Neurosurgery"
+  },
+  "clinical_metadata": {
+    "cpt_code": "72148",
+    "icd_code": "M54.5",
+    "requested_service": "Lumbar Spine MRI",
+    "requested_date": "2026-07-09"
+  },
+  "documents": [
+    {
+      "document_id": "doc-mri-1",
+      "document_type": "Primary Care Clinical Assessment Notes",
+      "filename": "pcp_notes.txt",
+      "extracted_text": "Patient reports severe lower back pain radiating down the left leg for 3 months. Has completed 8 weeks of physical therapy and failed NSAIDs trial."
+    },
+    {
+      "document_id": "doc-mri-2",
+      "document_type": "Conservative Physical Therapy Logs",
+      "filename": "pt_log.txt",
+      "extracted_text": "Completed 8 weeks of physical therapy and failed NSAIDs trial."
+    }
+  ],
+  "is_complete": true,
+  "missing_fields": [],
+  "duplicate_suspected": false
+}

@@ -1,0 +1,68 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+@import "tailwindcss";
+
+@theme {
+  --color-darkBg: #0b0d13;
+  --color-darkCard: rgba(30, 41, 59, 0.25);
+  --color-accentPurple: #c084fc;
+  --color-accentIndigo: #818cf8;
+  --color-accentBlue: #38bdf8;
+}
+
+
+html, body, #root {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  background-color: #0b0d13;
+  color: #f1f5f9;
+  min-height: 100vh;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+/* Glassmorphism Cards */
+.dashboard-card {
+  background: rgba(30, 41, 59, 0.2);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+}
+
+.dashboard-card:hover {
+  border-color: rgba(129, 140, 248, 0.25);
+  box-shadow: 0 4px 25px 0 rgba(129, 140, 248, 0.05);
+}
+
+/* Highlighted Text */
+.highlight-yellow {
+  background-color: rgba(254, 240, 138, 0.35);
+  border-bottom: 2px solid rgba(234, 179, 8, 0.8);
+  border-radius: 2px;
+  padding: 1px 2px;
+  color: #000;
+  font-weight: 500;
+}
+
+/* Timeline Custom Styles */
+.timeline-item {
+  position: relative;
+  padding-left: 1.8rem;
+  margin-bottom: 0.8rem;
+  font-size: 0.85rem;
+  color: #cbd5e1;
+}
+
+.timeline-item::before {
+  content: "";
+  position: absolute;
+  left: 0.4rem;
+  top: 0.35rem;
+  width: 8px;
+  height: 8px;
+  background: #818cf8;
+  border-radius: 50%;
+  box-shadow: 0 0 8px #818cf8;
+}
