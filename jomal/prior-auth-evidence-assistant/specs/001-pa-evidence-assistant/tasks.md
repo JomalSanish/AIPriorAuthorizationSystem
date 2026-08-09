@@ -191,7 +191,7 @@
 
 ### 3a. Ollama LLM Client
 
-- [ ] T026 [US1] Implement Ollama LLM client in `backend/app/services/ollama.py`:
+- [x] T026 [US1] Implement Ollama LLM client in `backend/app/services/ollama.py`:
   - `OllamaClient` class:
     - `generate(prompt, system_prompt, format_schema) → str` — calls Ollama `/api/generate` with `model=llama3.2:3b`, supports structured JSON output via `format` parameter
     - `chat(messages, format_schema) → str` — calls Ollama `/api/chat` for multi-turn
@@ -202,14 +202,14 @@
 
 ### 3b. Embedding Service Client
 
-- [ ] T027 [US1] Implement TEI embedding client in `backend/app/services/embedding.py`:
+- [x] T027 [US1] Implement TEI embedding client in `backend/app/services/embedding.py`:
   - `EmbeddingClient` class:
     - `embed(texts: list[str]) → list[list[float]]` — calls TEI `/embed` endpoint, returns 384-dim dense vectors
     - Batch support with configurable batch size
     - Acquires GPU guard (T023) with EMBEDDING priority before every call
     - All calls to local TEI container — never a cloud embedding API
       > **⚠️ FLAG (external network)**: TEI base URL must come from config pointing at the Docker container. Verify no HuggingFace Inference API fallback.
-- [ ] T028 [US1] Implement fastembed sparse encoder in `backend/app/services/embedding.py` (same file as T027 — sequential):
+- [x] T028 [US1] Implement fastembed sparse encoder in `backend/app/services/embedding.py` (same file as T027 — sequential):
   - `SparseEncoder` class:
     - `encode_sparse(texts: list[str]) → list[SparseVector]` — uses fastembed BM25-style sparse encoding
     - Returns Qdrant-compatible sparse vectors
@@ -217,7 +217,7 @@
 
 ### 3c. Qdrant Collection Setup
 
-- [ ] T029 [US1] Implement Qdrant service in `backend/app/services/qdrant.py`:
+- [x] T029 [US1] Implement Qdrant service in `backend/app/services/qdrant.py`:
   - `QdrantService` class:
     - `ensure_collection()` — creates `pa_documents` collection if not exists, with named vector configs:
       - `dense`: 384-dim, cosine distance (bge-small-en-v1.5)
@@ -229,13 +229,13 @@
 
 ### 3d. Text Chunking
 
-- [ ] T030 [US1] Implement text chunking utility in `backend/app/services/chunking.py`:
+- [x] T030 [US1] Implement text chunking utility in `backend/app/services/chunking.py`:
   - `chunk_text(text, chunk_size=512, chunk_overlap=64) → list[Chunk]` — sentence-aware chunking (split on sentence boundaries, not mid-word); each chunk carries `start_char`, `end_char`, `page_number` (if available) for citation
   - `Chunk`: dataclass with `text`, `start_char`, `end_char`, `page_number`, `chunk_index`
 
 ### 3e. Intake Agent — Policy Ingestion Path
 
-- [ ] T031 [US1] Implement Intake Agent policy ingestion path in `backend/app/agents/intake.py`:
+- [x] T031 [US1] Implement Intake Agent policy ingestion path in `backend/app/agents/intake.py`:
   - `ingest_policy(policy_id, document_bytes, filename, file_type) → PolicyIngestionResult`:
     1. Parse document (T025)
     2. Extract required evidence items via LLM structured-output prompt (T026) — prompt asks for a JSON array of `{requirement_text, requirement_category}`
@@ -247,28 +247,28 @@
 
 ### 3f. Policy API & Admin UI
 
-- [ ] T032 [US1] Implement policy management API endpoints in `backend/app/api/policies.py`:
+- [x] T032 [US1] Implement policy management API endpoints in `backend/app/api/policies.py`:
   - `POST /api/policies` — Admin only: upload policy document + policy name; triggers ingestion (T031); returns policy with extracted requirements
   - `GET /api/policies` — All roles: list active policies (name + id); for Intake, used to populate case-creation dropdown (FR-008)
   - `GET /api/policies/{policy_id}` — Admin only: full policy detail with requirements
   - `PATCH /api/policies/{policy_id}` — Admin only: deactivate policy (soft-delete, FR-009a) — removes from dropdown but does not invalidate existing cases
   - Audit log entries for policy upload and deactivation (FR-040a)
-- [ ] T033 [P] [US1] Create Policy Management page in `frontend/src/pages/PolicyManagement.tsx`:
+- [x] T033 [P] [US1] Create Policy Management page in `frontend/src/pages/PolicyManagement.tsx`:
   - Admin-only page (role-gated in router)
   - Upload form: file input (PDF/DOCX/TXT/MD) + Policy Name text field
   - On submit: POST to `/api/policies`, show confirmation with policy name + extracted requirements list
   - Policy registry table: list all policies with name, document count, requirement count, status (active/inactive), deactivate action
-- [ ] T034 [P] [US1] Create Sidebar navigation component in `frontend/src/components/Sidebar.tsx`:
+- [x] T034 [P] [US1] Create Sidebar navigation component in `frontend/src/components/Sidebar.tsx`:
   - Persistent sidebar, role-gated sections:
     - Case Management (Intake + Admin)
     - Nurse Review (Nurse + Admin)
     - Administrative Dashboard (Admin only)
   - Highlight active section
-- [ ] T035 [P] [US1] Create Login page in `frontend/src/pages/Login.tsx`:
+- [x] T035 [P] [US1] Create Login page in `frontend/src/pages/Login.tsx`:
   - Username/password form → POST `/api/auth/login`
   - Store access + refresh tokens (memory only — never localStorage per FR-043c)
   - Redirect to role-appropriate landing page
-- [ ] T036 [P] [US1] Implement API client with auth interceptors in `frontend/src/services/api.ts`:
+- [x] T036 [P] [US1] Implement API client with auth interceptors in `frontend/src/services/api.ts`:
   - Axios instance with base URL
   - Request interceptor: attach access token header
   - Response interceptor: on 401, attempt silent refresh via `/api/auth/refresh`; if refresh fails, redirect to login (FR-001b)
