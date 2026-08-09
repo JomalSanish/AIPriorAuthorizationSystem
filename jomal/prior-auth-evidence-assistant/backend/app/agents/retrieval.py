@@ -11,6 +11,21 @@ Responsibilities:
 
 ⚠️ All LLM calls MUST hit the local Ollama instance only (FR-036a, FR-046c).
    Never add a fallback to an external NLU or cloud LLM API.
+
+Relevance filtering note (case search bug fix): retrieve_evidence() intentionally
+does NOT apply relevance filtering — the Reasoning Agent (T050/T051) is designed to
+receive the top-k candidate chunks regardless of how weak the best match is, and
+correctly classifies a requirement as Absent when nothing relevant is actually
+retrieved (see reasoning.py). Filtering candidates out here would just remove the
+signal the Reasoning Agent uses to make that call.
+
+execute_case_search() is different: its results go straight to a human via the
+NLP search UI with no LLM interpreting them in between, so an unfiltered RRF result
+list reads as "search returned unrelated cases" — RRF fusion ranks whatever exists
+in the collection, it doesn't have a built-in "not relevant enough" cutoff. That
+function now applies a relative score cutoff (see qdrant.py's hybrid_search) so a
+query only surfaces cases that are actually close to the best match, not just
+whatever happened to rank in the top 20.
 """
 
 from __future__ import annotations
@@ -102,8 +117,26 @@ class RetrievalAgent:
     # Default top-k for evidence retrieval
     DEFAULT_EVIDENCE_TOP_K: int = 5
 
-    # Default top-k for NLP case search
+    # Default top-k for NLP case search — an upper bound; the relative cutoff
+    # below is what actually determines how many of these get returned.
     DEFAULT_CASE_SEARCH_TOP_K: int = 20
+
+    # A case-search result must score at least this fraction of the top
+    # result's score to be included. 0.5 means "at least half as good a
+    # match as the best result" — self-scaling with whatever the top score
+    # happens to be for a given query, so it doesn't need per-deployment
+    # tuning the way an absolute threshold would. Tune down (toward 0) to
+    # show more borderline results, or up (toward 1) to show only very
+    # tight matches.
+    CASE_SEARCH_RELATIVE_CUTOFF_RATIO: float = 0.5
+
+    # Absolute floor, RRF-scale (NOT a 0-1 similarity score — see the note in
+    # qdrant.py's hybrid_search docstring). This is a backstop for the case
+    # where every candidate is uniformly weak (so the relative cutoff above
+    # doesn't help, since nothing stands out as "clearly the best"). Kept
+    # deliberately conservative; empirical tuning is expected once there's
+    # real query traffic to look at.
+    CASE_SEARCH_SCORE_FLOOR: float = 0.005
 
     # ---------------------------------------------------------------------------
     # T045 — Evidence retrieval
@@ -125,6 +158,11 @@ class RetrievalAgent:
           3. Execute hybrid search (RRF) scoped to doc_type=case_document_chunk
              AND case_id=<this_case>.
           4. Return ranked ``RetrievalResult`` objects.
+
+        Deliberately unfiltered by relevance score (see module docstring) —
+        the Reasoning Agent needs to see the best-available candidates even
+        when none of them are a good match, so it can correctly classify the
+        requirement as Absent.
 
         Args:
             case_id: UUID string of the case being evaluated.
@@ -169,6 +207,8 @@ class RetrievalAgent:
             filter=case_filter,
             top_k=top_k,
             doc_type="case_document_chunk",
+            # No score_threshold / relative_cutoff_ratio here — see module
+            # docstring for why evidence retrieval stays unfiltered.
         )
 
         retrieval_results: List[RetrievalResult] = []
@@ -206,7 +246,7 @@ class RetrievalAgent:
         optional exact-match and date-range filters.
 
         The LLM role is *strictly* intent translation — it never reads case
-        documents or makes clinical judgements (FR-036).
+        documents to answer the search itself (FR-036).
 
         ⚠️ All calls go to the local Ollama instance — never an external API
            (FR-036a, FR-046c).
@@ -314,7 +354,11 @@ class RetrievalAgent:
         Steps:
           1. Build Qdrant payload filter from extracted ``filters``.
           2. Embed ``semantic_query``: dense + sparse.
-          3. Execute hybrid search scoped to doc_type=case_profile.
+          3. Execute hybrid search scoped to doc_type=case_profile, with
+             relevance filtering (relative cutoff + absolute floor — see
+             CASE_SEARCH_RELATIVE_CUTOFF_RATIO / CASE_SEARCH_SCORE_FLOOR and
+             qdrant.py's hybrid_search docstring) so weakly-matching cases
+             don't get surfaced alongside a strong match.
           4. Apply role-based post-retrieval visibility (FR-039a):
              - Nurse: metadata only for non-locked cases (summary hidden).
           5. Return case-level results — never raw document chunks (FR-038).
@@ -322,7 +366,8 @@ class RetrievalAgent:
         Args:
             structured_request: Output of ``parse_search_query``.
             role: Caller's role string ("intake" | "nurse" | "admin").
-            top_k: Maximum results to return.
+            top_k: Maximum results to return (upper bound only — the relative
+                cutoff typically returns fewer).
 
         Returns:
             List of ``CaseSearchResult`` with case-level metadata.
@@ -381,6 +426,8 @@ class RetrievalAgent:
             filter=payload_filter,
             top_k=top_k,
             doc_type="case_profile",
+            score_threshold=self.CASE_SEARCH_SCORE_FLOOR,
+            relative_cutoff_ratio=self.CASE_SEARCH_RELATIVE_CUTOFF_RATIO,
         )
 
         case_results: List[CaseSearchResult] = []

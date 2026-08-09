@@ -3,9 +3,15 @@ Admin user-management endpoints.
 
 All routes require the ``admin`` role (FR-003).
 
-    POST   /api/admin/users             — Create user
-    GET    /api/admin/users             — List all users
-    PATCH  /api/admin/users/{user_id}   — Deactivate / re-activate user
+    POST   /api/admin/users                       — Create user
+    GET    /api/admin/users                        — List all users
+    PATCH  /api/admin/users/{user_id}               — Update username/role/is_active
+    POST   /api/admin/users/{user_id}/reset-password — Admin-issued password reset
+
+Both PATCH and reset-password are blocked from targeting the caller's own account when
+the change would remove their own admin access or deactivate themselves — see
+``_guard_against_self_lockout`` — to prevent an Admin from accidentally locking
+themselves out with no other Admin account to recover through.
 """
 
 from __future__ import annotations
@@ -13,9 +19,10 @@ from __future__ import annotations
 import logging
 import uuid
 from datetime import datetime, timezone
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -42,7 +49,18 @@ class CreateUserRequest(BaseModel):
 
 
 class PatchUserRequest(BaseModel):
-    is_active: bool
+    """
+    Partial update. Every field is optional so a caller can update just one
+    attribute (e.g. only `role`) without resending the others. At least one
+    field must be provided.
+    """
+    username: Optional[str] = None
+    role: Optional[UserRole] = None
+    is_active: Optional[bool] = None
+
+
+class ResetPasswordRequest(BaseModel):
+    new_password: str = Field(min_length=8)
 
 
 class UserOut(BaseModel):
@@ -53,6 +71,41 @@ class UserOut(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class MessageResponse(BaseModel):
+    message: str
+
+
+# ---------------------------------------------------------------------------
+# Helper: block an Admin from locking themselves out
+# ---------------------------------------------------------------------------
+
+def _guard_against_self_lockout(
+    admin: User,
+    target_user_id: uuid.UUID,
+    *,
+    new_role: Optional[UserRole] = None,
+    new_is_active: Optional[bool] = None,
+) -> None:
+    """
+    Prevent an Admin from deactivating their own account or demoting themselves
+    out of the admin role. Both would leave the account with no way to undo the
+    change through the same API (no self-service reactivation/role-change path
+    exists by design — see the "no self-service" note in this project's spec).
+    """
+    if target_user_id != admin.id:
+        return
+    if new_is_active is False:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You cannot deactivate your own account.",
+        )
+    if new_role is not None and new_role != UserRole.admin:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You cannot change your own role away from admin.",
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -128,7 +181,7 @@ async def list_users(
 @router.patch(
     "/users/{user_id}",
     response_model=UserOut,
-    summary="Activate or deactivate a user (Admin only)",
+    summary="Update a user's username, role, and/or active status (Admin only)",
 )
 async def patch_user(
     user_id: uuid.UUID,
@@ -136,24 +189,106 @@ async def patch_user(
     db: AsyncSession = Depends(get_db),
     admin: User = Depends(_admin_guard),
 ) -> UserOut:
-    """Deactivate or reactivate a user account."""
+    """
+    Partially update a user account: username, role, and/or is_active.
+    Any combination of fields may be provided; at least one is required.
+
+    Blocked from letting an Admin deactivate their own account or change their
+    own role away from admin (see ``_guard_against_self_lockout``).
+    """
+    if body.username is None and body.role is None and body.is_active is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="At least one of username, role, or is_active must be provided.",
+        )
+
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
     if user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
-    old_status = user.is_active
-    user.is_active = body.is_active
+    _guard_against_self_lockout(
+        admin, user_id, new_role=body.role, new_is_active=body.is_active,
+    )
 
-    action = "admin.user.activate" if body.is_active else "admin.user.deactivate"
+    changes: dict[str, dict[str, object]] = {}
+
+    if body.username is not None and body.username != user.username:
+        existing = await db.execute(
+            select(User).where(User.username == body.username, User.id != user_id)
+        )
+        if existing.scalar_one_or_none() is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Username '{body.username}' already exists",
+            )
+        changes["username"] = {"old": user.username, "new": body.username}
+        user.username = body.username
+
+    if body.role is not None and body.role != user.role:
+        changes["role"] = {"old": user.role.value, "new": body.role.value}
+        user.role = body.role
+
+    if body.is_active is not None and body.is_active != user.is_active:
+        changes["is_active"] = {"old": user.is_active, "new": body.is_active}
+        user.is_active = body.is_active
+
+    if changes:
+        # Distinguish activate/deactivate as its own action for easy audit filtering,
+        # everything else (username/role) rolls up under a general update action.
+        if set(changes.keys()) == {"is_active"}:
+            action = "admin.user.activate" if body.is_active else "admin.user.deactivate"
+        else:
+            action = "admin.user.update"
+
+        db.add(AuditLog(
+            trace_id=uuid.uuid4(),
+            actor_type=ActorType.user,
+            actor_id=str(admin.id),
+            action=action,
+            timestamp=datetime.now(timezone.utc),
+            metadata_={"target_user_id": str(user_id), "changes": changes},
+        ))
+        logger.info("Admin %s updated user %s: %s", admin.id, user_id, changes)
+
+    return UserOut.model_validate(user)
+
+
+# ---------------------------------------------------------------------------
+# POST /api/admin/users/{user_id}/reset-password
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/users/{user_id}/reset-password",
+    response_model=MessageResponse,
+    summary="Reset a user's password (Admin only)",
+)
+async def reset_password(
+    user_id: uuid.UUID,
+    body: ResetPasswordRequest,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(_admin_guard),
+) -> MessageResponse:
+    """
+    Admin-issued password reset. The new password is never logged or echoed
+    back — only the fact that a reset occurred, consistent with FR-040f's
+    "log access, never the value" pattern already used for secrets access.
+    """
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    user.hashed_password = hash_password(body.new_password)
+
     db.add(AuditLog(
         trace_id=uuid.uuid4(),
         actor_type=ActorType.user,
         actor_id=str(admin.id),
-        action=action,
+        action="admin.user.password_reset",
         timestamp=datetime.now(timezone.utc),
-        metadata_={"target_user_id": str(user_id), "old_status": old_status, "new_status": body.is_active},
+        metadata_={"target_user_id": str(user_id)},  # never the password itself
     ))
 
-    logger.info("Admin %s set user %s is_active=%s", admin.id, user_id, body.is_active)
-    return UserOut.model_validate(user)
+    logger.info("Admin %s reset password for user %s", admin.id, user_id)
+    return MessageResponse(message=f"Password reset for user {user.username}.")

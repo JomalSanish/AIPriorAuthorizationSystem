@@ -85,16 +85,39 @@ class QdrantService:
         )
 
     async def hybrid_search(
-        self, 
-        query_dense: List[float], 
-        query_sparse: rest.SparseVector, 
-        filter: Optional[Filter], 
-        top_k: int, 
-        doc_type: str
+        self,
+        query_dense: List[float],
+        query_sparse: rest.SparseVector,
+        filter: Optional[Filter],
+        top_k: int,
+        doc_type: str,
+        score_threshold: Optional[float] = None,
+        relative_cutoff_ratio: Optional[float] = None,
     ) -> List[SearchResult]:
         """
         Prefetch dense + sparse results, fuse with Qdrant-native RRF.
         Filter is applied to scope by doc_type (e.g. policy_chunk or case_chunk).
+
+        Relevance filtering (both optional, off by default — existing callers
+        that don't pass these get identical behavior to before):
+
+        - ``score_threshold``: an absolute floor passed straight to Qdrant's
+          query API. NOTE — RRF fused scores are rank-based (roughly
+          ``1 / (k + rank)`` per prefetch list, summed across dense + sparse;
+          with Qdrant's default k=60 the theoretical max is ~0.033 for a
+          point ranked #1 in both lists). This is NOT a 0–1 similarity score
+          the way raw cosine similarity is, so don't reuse similarity-style
+          thresholds (e.g. 0.7) here — start low (this module defaults
+          callers to ~0.005 where used) and tune empirically once there's
+          real query traffic to look at.
+        - ``relative_cutoff_ratio``: a value in (0, 1]. After fusion, any
+          result scoring below ``top_result.score * relative_cutoff_ratio``
+          is dropped. This self-scales with whatever the top match's score
+          happens to be for a given query, so it doesn't need the same
+          empirical tuning ``score_threshold`` does — it directly targets
+          "there's one clearly-best match and a long tail of much weaker
+          ones," which is the shape of the problem that was causing NLP case
+          search to surface unrelated results.
         """
         # Ensure doc_type is in the filter
         must_clauses = [
@@ -133,11 +156,23 @@ class QdrantService:
             prefetch=prefetch,
             query=rest.FusionQuery(fusion=rest.Fusion.RRF),
             limit=top_k,
+            score_threshold=score_threshold,
         )
-        
+
+        points = results.points
+
+        # Relative cutoff: drop results far weaker than the best match.
+        # query_points returns points sorted by score descending, so points[0]
+        # is always the top score when the list is non-empty.
+        if relative_cutoff_ratio is not None and points:
+            top_score = points[0].score
+            if top_score > 0:
+                min_allowed = top_score * relative_cutoff_ratio
+                points = [p for p in points if p.score >= min_allowed]
+
         # Convert to SearchResult
         final_results = []
-        for p in results.points:
+        for p in points:
             final_results.append(
                 SearchResult(
                     point_id=p.id,
