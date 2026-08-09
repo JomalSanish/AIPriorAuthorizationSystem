@@ -16,7 +16,8 @@ from app.services.minio import minio_service
 
 router = APIRouter()
 
-@router.post("/", dependencies=[Depends(require_role("admin"))])
+@router.post("", dependencies=[Depends(require_role("admin"))])
+@router.post("/", dependencies=[Depends(require_role("admin"))], include_in_schema=False)
 async def upload_policy(
     name: str = Form(...),
     description: str = Form(""),
@@ -89,7 +90,8 @@ async def upload_policy(
     }
 
 
-@router.get("/")
+@router.get("")
+@router.get("/", include_in_schema=False)
 async def list_policies(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)

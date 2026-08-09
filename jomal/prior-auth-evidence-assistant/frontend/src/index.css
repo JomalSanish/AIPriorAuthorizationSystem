@@ -625,6 +625,67 @@ textarea {
   border-color: var(--danger-soft-border);
 }
 
+.badge-primary {
+  background: var(--primary-soft);
+  color: var(--primary-tint-text);
+  border-color: var(--primary-soft-border);
+}
+
+/* =========================================================================
+   Case Management
+   ========================================================================= */
+
+.case-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.case-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.case-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.case-id {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 14.5px;
+  color: var(--text);
+}
+
+.case-field-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.case-field-value {
+  font-size: 13.75px;
+  color: var(--text);
+}
+
+.sla-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--amber-soft);
+  border: 1px solid var(--amber-soft-border);
+  color: var(--amber);
+  font-size: 12.75px;
+  font-weight: 500;
+}
+
 /* =========================================================================
    Table
    ========================================================================= */

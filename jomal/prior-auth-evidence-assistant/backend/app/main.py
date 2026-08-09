@@ -19,7 +19,7 @@ from typing import Any
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import auth, admin, policies
+from app.api import auth, admin, policies, cases
 from app.config import get_settings
 
 logger = logging.getLogger("pa.main")
@@ -129,8 +129,9 @@ def create_app() -> FastAPI:
 
     # Routers
     app.include_router(auth.router)
-    app.include_router(admin.router)
+    app.include_router(admin.router, prefix="/api/admin", tags=["admin"])
     app.include_router(policies.router, prefix="/api/policies", tags=["policies"])
+    app.include_router(cases.router, prefix="/api/cases", tags=["cases"])
 
     # Root health endpoint
     @app.get("/health", tags=["system"], summary="Application health probe")

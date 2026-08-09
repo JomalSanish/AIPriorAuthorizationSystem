@@ -4,6 +4,8 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import ProtectedRoute, { landingPathForRole } from './components/ProtectedRoute';
 import Login from './pages/Login';
 import PolicyManagement from './pages/PolicyManagement';
+import CaseManagement from './pages/CaseManagement';
+import NewCase from './pages/NewCase';
 import PlaceholderPage from './pages/PlaceholderPage';
 
 /** Sends an already-authenticated visitor away from /login and / to their landing page. */
@@ -24,12 +26,7 @@ function App() {
                         path="/cases"
                         element={
                             <ProtectedRoute roles={['intake', 'admin']}>
-                                <PlaceholderPage
-                                    eyebrow="Case Management"
-                                    title="Case Management"
-                                    description="Intake queue, SLA clocks, and case status for every submitted prior authorization request."
-                                    phase="Phase 4"
-                                />
+                                <CaseManagement />
                             </ProtectedRoute>
                         }
                     />
@@ -37,12 +34,7 @@ function App() {
                         path="/cases/new"
                         element={
                             <ProtectedRoute roles={['intake']}>
-                                <PlaceholderPage
-                                    eyebrow="Case Management"
-                                    title="New Case"
-                                    description="Upload evidence documents and trigger LLM metadata extraction to open a new case."
-                                    phase="Phase 4"
-                                />
+                                <NewCase />
                             </ProtectedRoute>
                         }
                     />

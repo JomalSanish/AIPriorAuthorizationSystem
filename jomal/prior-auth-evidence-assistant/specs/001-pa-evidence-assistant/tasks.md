@@ -292,7 +292,7 @@
 
 ### 4a. Case API
 
-- [ ] T038 [US2] Implement case management API endpoints in `backend/app/api/cases.py`:
+- [x] T038 [US2] Implement case management API endpoints in `backend/app/api/cases.py`:
   - `POST /api/cases` — Intake only: create case draft with policy_id
   - `POST /api/cases/{case_id}/documents` — Intake only: upload one or more documents (multi-file); triggers document processing (T025) + MinIO upload (T018) + sha256/metadata storage in Postgres
   - `POST /api/cases/{case_id}/extract-metadata` — Intake only: triggers LLM metadata extraction, returns auto-extracted fields for confirmation
@@ -302,7 +302,7 @@
 
 ### 4b. Intake Agent — Case Document Path
 
-- [ ] T039 [US2] Implement Intake Agent case document processing in `backend/app/agents/intake.py`:
+- [x] T039 [US2] Implement Intake Agent case document processing in `backend/app/agents/intake.py`:
   - `process_case_documents(case_id) → CaseDocumentResult`:
     1. For each case document: parse via document processor (T025), upload raw file to MinIO (T018), store metadata + sha256 in Postgres `CaseDocument` table
     2. Chunk extracted text (T030) per document
@@ -310,14 +310,14 @@
     4. Upsert into Qdrant as `case_document_chunk` points with payload: `{doc_type: "case_document_chunk", case_id, document_id, chunk_index, page_number, text}`
     5. Return per-document results with chunk counts and OCR status
 
-- [ ] T040 [US2] Implement Intake Agent metadata auto-extraction in `backend/app/agents/intake.py`:
+- [x] T040 [US2] Implement Intake Agent metadata auto-extraction in `backend/app/agents/intake.py`:
   - `extract_case_metadata(case_id, combined_text) → CaseMetadata`:
     - LLM structured-output prompt (T026) to extract: `{member_id, provider_id, cpt_code, icd_code, service_type}` from the concatenated document text
     - Returns `CaseMetadata` dataclass with extracted fields (all nullable — LLM may not find every field)
     - Uses the same local LLM as all other inference (FR-043a)
     - The extraction prompt MUST include only the document text being extracted from for this call — never other case documents, other cases, or fields not relevant to metadata extraction (FR-043b)
 
-- [ ] T041 [US2] Implement case_profile point generation in `backend/app/agents/intake.py`:
+- [x] T041 [US2] Implement case_profile point generation in `backend/app/agents/intake.py`:
   - `generate_case_profile(case_id) → None`:
     1. Load case metadata + all document titles from Postgres
     2. Generate a short summary of the case via LLM (T026) — one paragraph describing the case type, key identifiers, and document set
@@ -327,7 +327,7 @@
 
 ### 4c. Case Creation UI
 
-- [ ] T042 [P] [US2] Create New Case page in `frontend/src/pages/NewCase.tsx`:
+- [x] T042 [P] [US2] Create New Case page in `frontend/src/pages/NewCase.tsx`:
   - Policy dropdown populated from `GET /api/policies` (names only, FR-008)
   - Multi-file upload zone (drag-and-drop, accepts PDF/DOCX/TXT/MD/JPEG/PNG/TIFF per FR-013)
   - Upload progress indicators per file
@@ -335,12 +335,12 @@
   - Auto-filled form fields: Member ID, Provider ID, CPT/HCPCS Code, ICD-10 Code, Service Type — all editable (FR-012)
   - Submit button → `POST /api/cases/{case_id}/submit`
   - Warning dialog if all documents failed extraction (FR-013a) — requires explicit confirmation
-- [ ] T043 [P] [US2] Create Case Management page in `frontend/src/pages/CaseManagement.tsx`:
+- [x] T043 [P] [US2] Create Case Management page in `frontend/src/pages/CaseManagement.tsx`:
   - Case list table: Case ID, policy name, service type, status, SLA clock, submitted date
   - Status badge per case (color-coded: processing, pending review, accepted, rejected, error, re-verification)
   - "New Case" button → navigates to `/cases/new`
   - Visible to Intake + Admin roles
-- [ ] T044 [P] [US2] Create CaseCard component in `frontend/src/components/CaseCard.tsx`:
+- [x] T044 [P] [US2] Create CaseCard component in `frontend/src/components/CaseCard.tsx`:
   - Reusable card showing case heading: Case ID, service type, status badge, SLA timer (computed from `sla_start_at` to now), submitted date
   - Used in Case Management list and Nurse Review queue
 
