@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { IconAlert, IconUpload } from '../components/icons';
 import { CaseCard } from '../components/CaseCard';
+import SearchBar, { type CaseSearchResult } from '../components/SearchBar';
 
 interface CaseItem {
     id: string;
@@ -17,6 +18,7 @@ const CaseManagement: React.FC = () => {
     const [cases, setCases] = useState<CaseItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [highlightId, setHighlightId] = useState<string | null>(null);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -37,6 +39,16 @@ const CaseManagement: React.FC = () => {
         }
     };
 
+    const handleSearchSelect = (result: CaseSearchResult) => {
+        // Highlight the matching case in the list so the user can find it
+        setHighlightId(result.case_id);
+        // Scroll to the card if it's rendered
+        setTimeout(() => {
+            const el = document.getElementById(`case-card-${result.case_id}`);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
+    };
+
     return (
         <>
             <div className="page-header">
@@ -51,11 +63,16 @@ const CaseManagement: React.FC = () => {
             </div>
 
             <div className="card card-pad">
-                <div className="card-header">
+                <div className="card-header" style={{ flexWrap: 'wrap', gap: 12 }}>
                     <div>
                         <div className="card-title">All cases</div>
                         <p className="card-desc">History of all cases submitted in the system.</p>
                     </div>
+                    {/* T049 — NLP Case Search SearchBar */}
+                    <SearchBar
+                        placeholder="Search cases by type, code, or member…"
+                        onSelect={handleSearchSelect}
+                    />
                 </div>
 
                 {error && (
@@ -82,14 +99,23 @@ const CaseManagement: React.FC = () => {
                 ) : (
                     <div className="case-grid">
                         {cases.map((c) => (
-                            <CaseCard
+                            <div
                                 key={c.id}
-                                caseId={c.id}
-                                serviceType={c.service_type || c.policy_name}
-                                status={c.status}
-                                slaStartAt={c.sla_start_at}
-                                createdAt={c.created_at}
-                            />
+                                id={`case-card-${c.id}`}
+                                style={{
+                                    outline: highlightId === c.id ? '2px solid var(--primary)' : 'none',
+                                    borderRadius: 'var(--radius)',
+                                    transition: 'outline 0.3s',
+                                }}
+                            >
+                                <CaseCard
+                                    caseId={c.id}
+                                    serviceType={c.service_type || c.policy_name}
+                                    status={c.status}
+                                    slaStartAt={c.sla_start_at}
+                                    createdAt={c.created_at}
+                                />
+                            </div>
                         ))}
                     </div>
                 )}

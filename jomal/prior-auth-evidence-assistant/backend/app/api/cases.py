@@ -15,6 +15,7 @@ from app.db.database import get_db
 from app.db.models import Case, CaseDocument, CaseStatus, User, AuditLog, Policy
 from app.api.deps import get_current_user, require_role
 from app.agents.intake import intake_agent
+from app.agents.retrieval import retrieval_agent
 from app.services.minio import minio_service
 
 router = APIRouter()
@@ -284,6 +285,52 @@ async def list_cases(
             "created_at": case_obj.created_at
         })
     return response
+
+# ---------------------------------------------------------------------------
+# T048 — NLP Case Search (US6) — Must be declared before GET /{case_id}
+# because FastAPI matches paths before methods; POST /search would otherwise
+# resolve to GET /{case_id} and return 405 Method Not Allowed.
+# ---------------------------------------------------------------------------
+
+class CaseSearchRequest(BaseModel):
+    query: str
+
+
+@router.post("/search")
+async def search_cases(
+    request: CaseSearchRequest,
+    current_user: User = Depends(get_current_user),
+):
+    """
+    POST /api/cases/search — all roles.
+
+    Translates a free-text natural-language query into a StructuredSearchRequest
+    via LLM query understanding (T046), then executes a hybrid dense+sparse
+    search over case_profile points in Qdrant (T047).
+
+    Returns case-level metadata only — never raw document chunks (FR-038).
+    Role-based visibility is applied inside execute_case_search (FR-039a).
+    """
+    structured = await retrieval_agent.parse_search_query(request.query)
+    results = await retrieval_agent.execute_case_search(
+        structured_request=structured,
+        role=current_user.role.value,
+    )
+    return [
+        {
+            "case_id":      r.case_id,
+            "service_type": r.service_type,
+            "status":       r.status,
+            "policy_name":  r.policy_name,
+            "member_id":    r.member_id,
+            "provider_id":  r.provider_id,
+            "cpt_code":     r.cpt_code,
+            "icd_code":     r.icd_code,
+            "score":        r.score,
+            "summary":      r.summary,
+        }
+        for r in results
+    ]
 
 
 @router.get("/{case_id}")

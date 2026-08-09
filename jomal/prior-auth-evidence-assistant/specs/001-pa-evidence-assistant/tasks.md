@@ -358,7 +358,7 @@
 
 ### 5a. Retrieval Agent
 
-- [ ] T045 [US3] Implement Retrieval Agent in `backend/app/agents/retrieval.py`:
+- [x] T045 [US3] Implement Retrieval Agent in `backend/app/agents/retrieval.py`:
   - `retrieve_evidence(case_id, policy_requirement, query_augmentation=None) → list[RetrievalResult]`:
     1. Build query text from `policy_requirement.requirement_text` + optional `query_augmentation` (from Workflow Agent re-invocation)
     2. Embed query: dense (T027) + sparse (T028)
@@ -368,7 +368,7 @@
 
 ### 5b. NLP Case Search — Query Understanding
 
-- [ ] T046 [US6] Implement NLP search Query Understanding in `backend/app/agents/retrieval.py`:
+- [x] T046 [US6] Implement NLP search Query Understanding in `backend/app/agents/retrieval.py`:
   - `parse_search_query(user_query: str) → StructuredSearchRequest`:
     - Small LLM call (T026) with structured-output prompt that parses free-text into:
       ```json
@@ -389,7 +389,7 @@
     - Uses same local LLM, same GPU guard (FR-036a, FR-046c)
       > **⚠️ FLAG (external network)**: This LLM call MUST use the local Ollama instance. Verify no fallback to a cloud NLU/intent-parsing API.
 
-- [ ] T047 [US6] Implement NLP search execution in `backend/app/agents/retrieval.py`:
+- [x] T047 [US6] Implement NLP search execution in `backend/app/agents/retrieval.py`:
   - `execute_case_search(structured_request: StructuredSearchRequest, role: str) → list[CaseSearchResult]`:
     1. Build Qdrant payload filter from extracted `filters` (exact match on `cpt_code`, `icd_code`, `member_id`, `provider_id`, `status`, `policy_name`; date range filter on case creation date)
     2. For filters that reference Postgres-only data (e.g. `provider_id` exact match), do a Postgres lookup first to get case_ids, then add to Qdrant filter
@@ -400,12 +400,12 @@
 
 ### 5c. Search API & UI
 
-- [ ] T048 [US6] Implement search API endpoint in `backend/app/api/cases.py`:
+- [x] T048 [US6] Implement search API endpoint in `backend/app/api/cases.py`:
   - `POST /api/cases/search` — all roles: accepts `{query: string}`, returns `list[CaseSearchResult]`
   - Internally calls `parse_search_query` (T046) → `execute_case_search` (T047)
   - Role passed from auth context for visibility filtering
 
-- [ ] T049 [P] [US6] Create SearchBar component in `frontend/src/components/SearchBar.tsx`:
+- [x] T049 [P] [US6] Create SearchBar component in `frontend/src/components/SearchBar.tsx`:
   - Free-text input with search icon
   - Debounced search on type (300ms) or on Enter
   - Calls `POST /api/cases/search`
@@ -426,7 +426,7 @@
 
 ### 6a. Reasoning Agent
 
-- [ ] T050 [US3] Implement Reasoning Agent in `backend/app/agents/reasoning.py`:
+- [x] T050 [US3] Implement Reasoning Agent in `backend/app/agents/reasoning.py`:
   - `classify_requirement(policy_requirement, retrieved_chunks: list[RetrievalResult]) → RequirementVerdict`:
     - LLM structured-output prompt (T026) that:
       1. Presents the policy requirement text
@@ -439,7 +439,7 @@
     - The classification prompt MUST include only the policy requirement text and the retrieved chunks for that requirement — never the full case record, other requirements' evidence, or other cases' data (FR-043b)
   - `RequirementVerdict`: dataclass with `requirement_id`, `requirement_text`, `classification` (enum), `citation` (nullable), `composite_confidence`, `retrieval_score`, `llm_confidence`, `reasoning_text`
 
-- [ ] T051 [US3] Implement batch requirement classification in `backend/app/agents/reasoning.py`:
+- [x] T051 [US3] Implement batch requirement classification in `backend/app/agents/reasoning.py`:
   - `classify_all_requirements(case_id, policy_id) → list[RequirementVerdict]`:
     1. Load all `PolicyRequirement` records for the policy
     2. For each requirement, call Retrieval Agent (T045) to get evidence chunks
@@ -449,7 +449,7 @@
 
 ### 6b. Summary Agent
 
-- [ ] T052 [US3] Implement Summary Agent in `backend/app/agents/summary.py`:
+- [x] T052 [US3] Implement Summary Agent in `backend/app/agents/summary.py`:
   - `generate_summary(case_id, verdicts: list[RequirementVerdict]) → CaseSummary`:
     - LLM structured-output prompt (T026) that:
       1. Receives the full set of requirement verdicts with their classifications and citations
