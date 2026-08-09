@@ -9,7 +9,6 @@ import NewCase from './pages/NewCase';
 import NurseReview from './pages/NurseReview';
 import CaseDetail from './pages/CaseDetail';
 import AdminDashboard from './pages/AdminDashboard';
-import PlaceholderPage from './pages/PlaceholderPage';
 
 /** Sends an already-authenticated visitor away from /login and / to their landing page. */
 const RootRedirect: FC = () => {
@@ -77,16 +76,7 @@ function App() {
                     />
                     <Route
                         path="/admin/users"
-                        element={
-                            <ProtectedRoute roles={['admin']}>
-                                <PlaceholderPage
-                                    eyebrow="Administration"
-                                    title="User Management"
-                                    description="Create, deactivate, and reassign roles for Intake, Nurse, and Admin accounts."
-                                    phase="Phase 7"
-                                />
-                            </ProtectedRoute>
-                        }
+                        element={<Navigate to="/admin" replace />}
                     />
 
                     <Route path="/" element={<RootRedirect />} />

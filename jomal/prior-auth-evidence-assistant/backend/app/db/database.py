@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncGenerator
 
+from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
@@ -74,11 +75,25 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
         @router.get("/")
         async def endpoint(db: AsyncSession = Depends(get_db)):
             ...
+
+    Commit behaviour on error
+    --------------------------
+    A raised ``HTTPException`` represents a *controlled* application-level
+    rejection (bad credentials, role denial, validation failure, etc.),
+    not a crash. Several endpoints intentionally write an audit-log row
+    (e.g. FR-040b failed-auth, FR-040c cross-role denial) and then raise
+    such an exception in the same request — the audit trail is only
+    useful if that row survives the rejection. So we still COMMIT on
+    ``HTTPException``. Any other, unexpected exception still triggers a
+    full rollback so a genuine bug can never leave partial writes behind.
     """
     async with get_session_factory()() as session:
         try:
             yield session
             await session.commit()
+        except HTTPException:
+            await session.commit()
+            raise
         except Exception:
             await session.rollback()
             raise

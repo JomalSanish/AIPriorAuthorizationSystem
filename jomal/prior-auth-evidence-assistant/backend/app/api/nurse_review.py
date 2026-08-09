@@ -65,12 +65,17 @@ async def get_review_queue(
     Return cases awaiting nurse review.
 
     Metadata only — no AI summaries or document content (FR-023).
-    Statuses included: pending_nurse_review, error.
+    Statuses included: pending_nurse_review, error, re_verification_required
+    (FR-032 — admin-edited cases are routed straight back to the queue).
     """
     result = await db.execute(
         select(Case, Policy.name.label("policy_name"))
         .join(Policy, Case.policy_id == Policy.id)
-        .where(Case.status.in_([CaseStatus.pending_nurse_review, CaseStatus.error]))
+        .where(Case.status.in_([
+            CaseStatus.pending_nurse_review,
+            CaseStatus.error,
+            CaseStatus.re_verification_required,
+        ]))
         .order_by(Case.sla_start_at.asc().nullslast())
     )
     rows = result.all()
@@ -121,7 +126,11 @@ async def lock_case(
     case = await db.get(Case, case_id)
     if not case:
         raise HTTPException(status_code=404, detail="Case not found")
-    if case.status not in (CaseStatus.pending_nurse_review, CaseStatus.error):
+    if case.status not in (
+        CaseStatus.pending_nurse_review,
+        CaseStatus.error,
+        CaseStatus.re_verification_required,
+    ):
         raise HTTPException(
             status_code=400,
             detail=f"Case is not in a reviewable state (status={case.status.value})"

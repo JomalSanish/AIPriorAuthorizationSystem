@@ -62,7 +62,10 @@ VALID_TRANSITIONS: Dict[CaseStatus, List[CaseStatus]] = {
     CaseStatus.pending_nurse_review:    [CaseStatus.accepted, CaseStatus.rejected],
     CaseStatus.accepted:                [CaseStatus.re_verification_required],
     CaseStatus.rejected:                [CaseStatus.re_verification_required],
-    CaseStatus.re_verification_required: [CaseStatus.processing],
+    # FR-032: an admin edit after a decision routes the case straight back to
+    # the Nurse Review queue (not back through the pipeline) — so a nurse
+    # must be able to accept/reject it again directly from this state.
+    CaseStatus.re_verification_required: [CaseStatus.accepted, CaseStatus.rejected],
     CaseStatus.error:                   [CaseStatus.pending_nurse_review],
 }
 
@@ -457,6 +460,33 @@ class WorkflowAgent:
                         absent   = sum(1 for v in verdicts if v.classification.value == "Absent")
                         unclear  = sum(1 for v in verdicts if v.classification.value == "Unclear")
 
+                        # Serialize the full per-requirement verdict list so the
+                        # Nurse Review UI's "Requirement Verdicts" table (T063)
+                        # has real data to render instead of being permanently
+                        # empty. Kept here on the audit_logs.metadata JSONB
+                        # column (no schema change needed).
+                        serialized_verdicts = [
+                            {
+                                "requirement_id": v.requirement_id,
+                                "requirement_text": v.requirement_text,
+                                "classification": v.classification.value,
+                                "composite_confidence": v.composite_confidence,
+                                "retrieval_score": v.retrieval_score,
+                                "llm_confidence": v.llm_confidence,
+                                "reasoning_text": v.reasoning_text,
+                                "citation": (
+                                    {
+                                        "document_id": v.citation.document_id,
+                                        "document_name": v.citation.document_name,
+                                        "page_number": v.citation.page_number,
+                                        "relevant_excerpt": v.citation.relevant_excerpt,
+                                    }
+                                    if v.citation else None
+                                ),
+                            }
+                            for v in verdicts
+                        ]
+
                         async with get_session_factory()() as audit_db:
                             await audit_service.log_agent(
                                 audit_db,
@@ -467,6 +497,7 @@ class WorkflowAgent:
                                 output_summary=(
                                     f"present={present} absent={absent} unclear={unclear}"
                                 ),
+                                metadata={"verdicts": serialized_verdicts},
                             )
                             await audit_db.commit()
 
@@ -481,6 +512,21 @@ class WorkflowAgent:
                         )
                         summary_generated = True
 
+                        # Serialize the full gap checklist (Absent/Unclear items
+                        # with citations) so the UI's Gap Checklist section
+                        # (FR-022) can render actual content instead of an
+                        # always-empty list.
+                        serialized_gaps = [
+                            {
+                                "requirement_id": g.requirement_id,
+                                "requirement_text": g.requirement_text,
+                                "classification": g.classification,
+                                "citation": g.citation,
+                                "confidence": g.confidence,
+                            }
+                            for g in summary.gap_checklist
+                        ]
+
                         async with get_session_factory()() as audit_db:
                             await audit_service.log_agent(
                                 audit_db,
@@ -492,6 +538,7 @@ class WorkflowAgent:
                                 metadata={
                                     "gap_count": len(summary.gap_checklist),
                                     "flags": summary.flags,
+                                    "gap_checklist": serialized_gaps,
                                 },
                             )
                             await audit_db.commit()

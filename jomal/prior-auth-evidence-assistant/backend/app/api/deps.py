@@ -29,7 +29,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import TokenDecodeError, decode_token
 from app.db.database import get_db
-from app.db.models import User
+from app.db.models import ActorType, User
+from app.services.audit import audit_service
 
 logger = logging.getLogger("pa.auth")
 
@@ -132,6 +133,7 @@ def require_role(*roles: str) -> Callable:
     """
     async def _dependency(
         current_user: User = Depends(get_current_active_user),
+        db: AsyncSession = Depends(get_db),
     ) -> User:
         if current_user.role.value not in roles:
             logger.warning(
@@ -139,6 +141,21 @@ def require_role(*roles: str) -> Callable:
                 current_user.id,
                 current_user.role,
                 roles,
+            )
+            # FR-040c: denied cross-role access attempts must be recorded
+            # in the audit trail (actor identity, attempted resource,
+            # timestamp) — not just the application log. get_db() commits
+            # on HTTPException specifically so this row survives the
+            # 403 raised immediately below.
+            await audit_service.log(
+                db,
+                trace_id=uuid.uuid4(),
+                case_id=None,
+                actor_type=ActorType.user,
+                actor_id=str(current_user.id),
+                action="access_denial",
+                input_summary=f"Attempted access requiring role(s): {list(roles)}",
+                output_summary=f"Denied — actual role: {current_user.role.value}",
             )
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,

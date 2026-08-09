@@ -6,12 +6,36 @@
  */
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import AppLayout from '../components/AppLayout';
 import EvidenceSummary from '../components/EvidenceSummary';
 import GapChecklist from '../components/GapChecklist';
 import DocumentViewer from '../components/DocumentViewer';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
+
+interface Citation {
+  document_name?: string;
+  page_number?: number;
+  relevant_excerpt?: string;
+}
+
+interface VerdictRow {
+  requirement_id: string;
+  requirement_text: string;
+  classification: 'Present' | 'Absent' | 'Unclear';
+  composite_confidence: number;
+  retrieval_score: number;
+  llm_confidence: number;
+  citation?: Citation | null;
+  reasoning_text?: string;
+}
+
+interface GapItemRow {
+  requirement_id: string;
+  requirement_text: string;
+  classification: 'Absent' | 'Unclear';
+  citation?: Citation | null;
+  confidence: number;
+}
 
 interface SummaryData {
   case_id: string;
@@ -23,6 +47,8 @@ interface SummaryData {
     flags?: string[];
   } | null;
   verdict_summary: string | null;
+  verdicts: VerdictRow[];
+  gap_checklist: GapItemRow[];
   documents: DocRecord[];
 }
 
@@ -99,71 +125,62 @@ const CaseDetail: React.FC = () => {
 
   if (loading) {
     return (
-      <AppLayout>
-        <div style={{ padding: 64, textAlign: 'center', color: 'var(--text-muted)' }}>
-          Loading case details…
-        </div>
-      </AppLayout>
+      <div style={{ padding: 64, textAlign: 'center', color: 'var(--text-muted)' }}>
+        Loading case details…
+      </div>
     );
   }
 
   if (error) {
     return (
-      <AppLayout>
-        <div
-          style={{
-            background: 'var(--danger-soft)',
-            border: '1px solid var(--danger-soft-border)',
-            borderRadius: 'var(--radius)',
-            padding: '16px 20px',
-            color: 'var(--danger)',
-            margin: 32,
-          }}
+      <div
+        style={{
+          background: 'var(--danger-soft)',
+          border: '1px solid var(--danger-soft-border)',
+          borderRadius: 'var(--radius)',
+          padding: '16px 20px',
+          color: 'var(--danger)',
+          margin: 32,
+        }}
+      >
+        <strong>Error:</strong> {error}
+        <br />
+        <button
+          className="btn btn-ghost btn-sm"
+          style={{ marginTop: 12 }}
+          onClick={() => navigate('/nurse-review')}
         >
-          <strong>Error:</strong> {error}
-          <br />
-          <button
-            className="btn btn-ghost btn-sm"
-            style={{ marginTop: 12 }}
-            onClick={() => navigate('/nurse-review')}
-          >
-            ← Back to Queue
-          </button>
-        </div>
-      </AppLayout>
+          ← Back to Queue
+        </button>
+      </div>
     );
   }
 
   // Success banner
   if (submitSuccess) {
     return (
-      <AppLayout>
-        <div
-          style={{
-            background: 'var(--success-soft)',
-            border: '1px solid var(--success-soft-border)',
-            borderRadius: 'var(--radius)',
-            padding: '32px',
-            textAlign: 'center',
-            margin: 64,
-            color: 'var(--success)',
-          }}
-        >
-          <div style={{ fontSize: 32, marginBottom: 12 }}>✓</div>
-          <strong>Decision submitted successfully!</strong>
-          <p style={{ margin: '8px 0 0' }}>Returning to queue…</p>
-        </div>
-      </AppLayout>
+      <div
+        style={{
+          background: 'var(--success-soft)',
+          border: '1px solid var(--success-soft-border)',
+          borderRadius: 'var(--radius)',
+          padding: '32px',
+          textAlign: 'center',
+          margin: 64,
+          color: 'var(--success)',
+        }}
+      >
+        <div style={{ fontSize: 32, marginBottom: 12 }}>✓</div>
+        <strong>Decision submitted successfully!</strong>
+        <p style={{ margin: '8px 0 0' }}>Returning to queue…</p>
+      </div>
     );
   }
 
-  const gapItems = summaryData?.summary_metadata
-    ? []
-    : [];
+  const gapItems = summaryData?.gap_checklist ?? [];
 
   return (
-    <AppLayout>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
@@ -251,6 +268,7 @@ const CaseDetail: React.FC = () => {
                       summary={{
                         summary_text: summaryData.summary_text || '',
                         flags: summaryData.summary_metadata?.flags,
+                        verdicts: summaryData.verdicts,
                       }}
                     />
                     {summaryData.summary_metadata?.gap_count != null &&
@@ -268,7 +286,7 @@ const CaseDetail: React.FC = () => {
                           >
                             Gap Checklist ({summaryData.summary_metadata.gap_count} item{summaryData.summary_metadata.gap_count !== 1 ? 's' : ''})
                           </div>
-                          <GapChecklist gapItems={[]} />
+                          <GapChecklist gapItems={gapItems} />
                         </div>
                       )}
                   </>
@@ -406,7 +424,6 @@ const CaseDetail: React.FC = () => {
           </div>
         </div>
       </div>
-    </AppLayout>
   );
 };
 

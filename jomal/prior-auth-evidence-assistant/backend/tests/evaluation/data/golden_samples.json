@@ -1,0 +1,115 @@
+[
+  {
+    "case_document_text": "The patient, a 45-year-old male, underwent 8 weeks of physical therapy without improvement. NSAIDs were prescribed and failed to control pain. A lumbar MRI was ordered to evaluate for disc herniation.",
+    "policy_requirement": "Patient must have completed at least 6 weeks of conservative treatment (physical therapy or equivalent) before MRI is authorized.",
+    "expected_retrieved_chunks": [
+      "The patient underwent 8 weeks of physical therapy without improvement.",
+      "NSAIDs were prescribed and failed to control pain."
+    ],
+    "expected_verdict": "Present",
+    "expected_citation": "The patient underwent 8 weeks of physical therapy without improvement."
+  },
+  {
+    "case_document_text": "Patient presents with chronic low back pain. Doctor recommends lumbar MRI for further evaluation.",
+    "policy_requirement": "Patient must have completed at least 6 weeks of conservative treatment (physical therapy or equivalent) before MRI is authorized.",
+    "expected_retrieved_chunks": [],
+    "expected_verdict": "Absent",
+    "expected_citation": null
+  },
+  {
+    "case_document_text": "Patient completed some physical therapy sessions over the past month. Pain has not improved significantly.",
+    "policy_requirement": "Patient must have completed at least 6 weeks of conservative treatment (physical therapy or equivalent) before MRI is authorized.",
+    "expected_retrieved_chunks": [
+      "Patient completed some physical therapy sessions over the past month."
+    ],
+    "expected_verdict": "Unclear",
+    "expected_citation": "Patient completed some physical therapy sessions over the past month."
+  },
+  {
+    "case_document_text": "Cardiology consult notes: Patient has NYHA Class III heart failure with EF of 35%. Symptoms persist despite optimal medical therapy including ACE inhibitors, beta blockers, and diuretics.",
+    "policy_requirement": "Patient must have NYHA Class III or IV heart failure with EF <= 35% and be on optimal medical therapy for at least 3 months.",
+    "expected_retrieved_chunks": [
+      "Patient has NYHA Class III heart failure with EF of 35%.",
+      "Symptoms persist despite optimal medical therapy including ACE inhibitors, beta blockers, and diuretics."
+    ],
+    "expected_verdict": "Present",
+    "expected_citation": "Patient has NYHA Class III heart failure with EF of 35%."
+  },
+  {
+    "case_document_text": "Patient has mild heart failure symptoms. Echocardiogram ordered to assess cardiac function.",
+    "policy_requirement": "Patient must have NYHA Class III or IV heart failure with EF <= 35% and be on optimal medical therapy for at least 3 months.",
+    "expected_retrieved_chunks": [],
+    "expected_verdict": "Absent",
+    "expected_citation": null
+  },
+  {
+    "case_document_text": "Oncology notes: Patient diagnosed with stage III non-small cell lung cancer. Biopsy confirmed adenocarcinoma. PD-L1 expression tested at 60%. Patient is treatment-naive.",
+    "policy_requirement": "Patient must have metastatic or stage III/IV NSCLC with PD-L1 >= 50% expression for immunotherapy authorization.",
+    "expected_retrieved_chunks": [
+      "Patient diagnosed with stage III non-small cell lung cancer.",
+      "PD-L1 expression tested at 60%."
+    ],
+    "expected_verdict": "Unclear",
+    "expected_citation": "PD-L1 expression tested at 60%."
+  },
+  {
+    "case_document_text": "Rheumatology notes: Patient has moderate-to-severe plaque psoriasis affecting >10% BSA. MTX contraindicated due to liver abnormalities. Multiple topical treatments have failed.",
+    "policy_requirement": "Patient must have moderate-to-severe plaque psoriasis with inadequate response to at least 2 conventional systemic therapies (including MTX or cyclosporine) before biologic therapy.",
+    "expected_retrieved_chunks": [
+      "MTX contraindicated due to liver abnormalities.",
+      "Multiple topical treatments have failed."
+    ],
+    "expected_verdict": "Unclear",
+    "expected_citation": "MTX contraindicated due to liver abnormalities."
+  },
+  {
+    "case_document_text": "Neurology notes: Patient has relapsing-remitting multiple sclerosis with 2 confirmed relapses in the past year. MRI shows 4 new T2 lesions. Patient failed interferon beta-1a therapy after 12 months.",
+    "policy_requirement": "Patient must have RRMS with at least 2 relapses in the past 2 years and inadequate response to at least one DMT.",
+    "expected_retrieved_chunks": [
+      "Patient has relapsing-remitting multiple sclerosis with 2 confirmed relapses in the past year.",
+      "Patient failed interferon beta-1a therapy after 12 months."
+    ],
+    "expected_verdict": "Present",
+    "expected_citation": "Patient has relapsing-remitting multiple sclerosis with 2 confirmed relapses in the past year."
+  },
+  {
+    "case_document_text": "Endocrinology notes: HbA1c is 8.2%. Patient has been on metformin for 6 months without adequate glycemic control. BMI is 32. No cardiovascular disease history.",
+    "policy_requirement": "Patient must have T2DM with HbA1c >= 7.5% on current therapy and BMI >= 30 for GLP-1 agonist authorization.",
+    "expected_retrieved_chunks": [
+      "HbA1c is 8.2%.",
+      "BMI is 32.",
+      "Patient has been on metformin for 6 months without adequate glycemic control."
+    ],
+    "expected_verdict": "Present",
+    "expected_citation": "HbA1c is 8.2%."
+  },
+  {
+    "case_document_text": "Orthopedic notes: Patient has osteoarthritis of the knee with moderate pain. X-ray shows joint space narrowing. Conservative treatment not yet attempted.",
+    "policy_requirement": "Patient must have tried and failed at least 3 months of conservative treatment including NSAIDs and physical therapy before knee arthroplasty authorization.",
+    "expected_retrieved_chunks": [
+      "Conservative treatment not yet attempted."
+    ],
+    "expected_verdict": "Absent",
+    "expected_citation": null
+  },
+  {
+    "case_document_text": "Gastroenterology notes: Crohn's disease diagnosis confirmed. Patient has moderate disease activity (CDAI 250). Failed azathioprine after 6 months. Infliximab considered.",
+    "policy_requirement": "Patient must have moderate-to-severe Crohn's disease with CDAI >= 220 and inadequate response to conventional therapy including immunomodulators.",
+    "expected_retrieved_chunks": [
+      "moderate disease activity (CDAI 250)",
+      "Failed azathioprine after 6 months."
+    ],
+    "expected_verdict": "Present",
+    "expected_citation": "moderate disease activity (CDAI 250)"
+  },
+  {
+    "case_document_text": "Pulmonology notes: Patient has moderate persistent asthma with FEV1 60% predicted. Current medications include ICS/LABA. Two exacerbations in the past 6 months requiring oral steroids.",
+    "policy_requirement": "Patient must have severe uncontrolled asthma (FEV1 < 50%) on high-dose ICS plus LABA with >= 2 exacerbations per year for biologics authorization.",
+    "expected_retrieved_chunks": [
+      "FEV1 60% predicted.",
+      "Two exacerbations in the past 6 months requiring oral steroids."
+    ],
+    "expected_verdict": "Unclear",
+    "expected_citation": "FEV1 60% predicted."
+  }
+]

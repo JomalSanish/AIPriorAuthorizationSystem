@@ -465,6 +465,8 @@ async def get_case_summary(
         "summary_text": summary_log.output_summary if summary_log else None,
         "summary_metadata": summary_log.metadata_ if summary_log else None,
         "verdict_summary": verdict_log.output_summary if verdict_log else None,
+        "verdicts": (verdict_log.metadata_ or {}).get("verdicts", []) if verdict_log else [],
+        "gap_checklist": (summary_log.metadata_ or {}).get("gap_checklist", []) if summary_log else [],
         "documents": [
             {
                 "id": str(d.id),

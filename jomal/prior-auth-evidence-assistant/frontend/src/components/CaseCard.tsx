@@ -47,8 +47,8 @@ const getStatusBadge = (status: string) => {
                     <span className="badge-dot" /> Error
                 </span>
             );
-        // Not yet emitted by the backend (CaseStatus enum) as of Phase 4 —
-        // kept for forward-compat with the nurse-decision-invalidation flow (FR-032).
+        // Set on cases the Admin has edited after a Nurse decision — routed
+        // straight back to the Nurse Review queue with this flag (FR-032).
         case 're_verification_required':
             return (
                 <span className="badge badge-warning">

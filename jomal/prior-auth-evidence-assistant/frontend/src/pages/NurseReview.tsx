@@ -6,8 +6,7 @@
  */
 import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import AppLayout from '../components/AppLayout';
-import SearchBar from '../components/SearchBar';
+import SearchBar, { type CaseSearchResult } from '../components/SearchBar';
 import { useAuth } from '../context/AuthContext';
 import { usePolling } from '../hooks/usePolling';
 import api from '../services/api';
@@ -66,6 +65,7 @@ const NurseReview: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lockingId, setLockingId] = useState<string | null>(null);
+  const [highlightId, setHighlightId] = useState<string | null>(null);
 
   const fetchQueue = useCallback(async () => {
     setLoading(true);
@@ -120,9 +120,25 @@ const NurseReview: React.FC = () => {
     }
   };
 
+  const handleSearchSelect = (result: CaseSearchResult) => {
+    // If it's already in the visible queue, jump the user to it.
+    const inQueue = queue.some(q => q.case_id === result.case_id);
+    if (inQueue) {
+      if (activeTab !== 'queue') setActiveTab('queue');
+      setHighlightId(result.case_id);
+      setTimeout(() => {
+        document.getElementById(`queue-row-${result.case_id}`)
+          ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
+      return;
+    }
+    // Otherwise it's outside this nurse's current queue (already decided,
+    // locked by someone else and not yet expired, etc.) — nothing to jump to.
+    alert('This case is not currently in your review queue.');
+  };
+
   return (
-    <AppLayout>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
@@ -132,7 +148,7 @@ const NurseReview: React.FC = () => {
             </p>
           </div>
           <div style={{ width: 320 }}>
-            <SearchBar />
+            <SearchBar onSelect={handleSearchSelect} />
           </div>
         </div>
 
@@ -200,10 +216,11 @@ const NurseReview: React.FC = () => {
               </div>
             ) : (
               <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', minWidth: 820, borderCollapse: 'collapse', fontSize: 13 }}>
                   <thead>
                     <tr style={{ background: 'var(--surface-alt)' }}>
-                      {['Case ID', 'Policy', 'Service', 'Member', 'Status', 'SLA', 'Lock', ''].map(h => (
+                      {['Case ID', 'Policy', 'Service', 'Member', 'Status', 'SLA', 'Lock', 'Actions'].map(h => (
                         <th key={h} style={thStyle}>{h}</th>
                       ))}
                     </tr>
@@ -212,9 +229,13 @@ const NurseReview: React.FC = () => {
                     {queue.map((item, i) => (
                       <tr
                         key={item.case_id}
+                        id={`queue-row-${item.case_id}`}
                         style={{
                           borderBottom: '1px solid var(--border)',
-                          background: i % 2 === 0 ? 'var(--surface)' : 'var(--surface-sunken)',
+                          background: highlightId === item.case_id
+                            ? 'var(--primary-soft)'
+                            : (i % 2 === 0 ? 'var(--surface)' : 'var(--surface-sunken)'),
+                          transition: 'background 0.3s',
                         }}
                       >
                         <td style={tdStyle}>
@@ -246,13 +267,12 @@ const NurseReview: React.FC = () => {
                             </span>
                           )}
                         </td>
-                        <td style={{ ...tdStyle, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                        <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>
                           {item.is_locked_by_me ? (
-                            <>
+                            <div style={{ display: 'flex', gap: 6 }}>
                               <button
                                 id={`btn-review-${item.case_id}`}
                                 className="btn btn-primary btn-sm"
-                                style={{ marginRight: 6 }}
                                 onClick={() => navigate(`/nurse-review/${item.case_id}`)}
                               >
                                 Review
@@ -265,7 +285,7 @@ const NurseReview: React.FC = () => {
                               >
                                 Release
                               </button>
-                            </>
+                            </div>
                           ) : !item.is_locked_by_other ? (
                             <button
                               id={`btn-lock-${item.case_id}`}
@@ -275,12 +295,15 @@ const NurseReview: React.FC = () => {
                             >
                               {lockingId === item.case_id ? 'Locking…' : 'Lock & Review'}
                             </button>
-                          ) : null}
+                          ) : (
+                            <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>—</span>
+                          )}
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+                </div>
               </div>
             )}
           </div>
@@ -298,7 +321,8 @@ const NurseReview: React.FC = () => {
               </div>
             ) : (
               <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', minWidth: 700, borderCollapse: 'collapse', fontSize: 13 }}>
                   <thead>
                     <tr style={{ background: 'var(--surface-alt)' }}>
                       {['Case ID', 'Policy', 'Service', 'Decision', 'Comment', 'Decided'].map(h => (
@@ -339,12 +363,12 @@ const NurseReview: React.FC = () => {
                     ))}
                   </tbody>
                 </table>
+                </div>
               </div>
             )}
           </div>
         )}
       </div>
-    </AppLayout>
   );
 };
 
@@ -357,6 +381,7 @@ function StatusBadge({ status }: { status: string }) {
     pending_nurse_review: { label: 'Pending Review', color: 'var(--info)', bg: 'var(--info-soft)' },
     error: { label: 'Error — Manual Review', color: 'var(--danger)', bg: 'var(--danger-soft)' },
     processing: { label: 'Processing', color: 'var(--amber)', bg: 'var(--amber-soft)' },
+    re_verification_required: { label: 'Re-verification Required', color: 'var(--amber)', bg: 'var(--amber-soft)' },
   };
   const c = cfg[status] ?? { label: status, color: 'var(--text-secondary)', bg: 'var(--surface-alt)' };
   return (
