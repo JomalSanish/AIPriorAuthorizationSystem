@@ -8,6 +8,7 @@ import CaseManagement from './pages/CaseManagement';
 import NewCase from './pages/NewCase';
 import NurseReview from './pages/NurseReview';
 import CaseDetail from './pages/CaseDetail';
+import AdminDashboard from './pages/AdminDashboard';
 import PlaceholderPage from './pages/PlaceholderPage';
 
 /** Sends an already-authenticated visitor away from /login and / to their landing page. */
@@ -62,12 +63,7 @@ function App() {
                         path="/admin"
                         element={
                             <ProtectedRoute roles={['admin']}>
-                                <PlaceholderPage
-                                    eyebrow="Administration"
-                                    title="Admin Dashboard"
-                                    description="Nurse workload, case throughput, and the chronological audit log across the system."
-                                    phase="Phase 7"
-                                />
+                                <AdminDashboard />
                             </ProtectedRoute>
                         }
                     />

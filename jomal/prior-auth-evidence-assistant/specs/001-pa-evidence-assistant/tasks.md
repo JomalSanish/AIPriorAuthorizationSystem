@@ -639,7 +639,7 @@
 
 ### 9a. Admin Case Intervention API
 
-- [ ] T068 [US5] Implement admin case intervention endpoint in `backend/app/api/admin.py`:
+- [x] T068 [US5] Implement admin case intervention endpoint in `backend/app/api/admin.py`:
   - `PATCH /api/admin/cases/{case_id}` — Admin only: update case fields (member_id, provider_id, cpt_code, icd_code, service_type, add/remove documents)
     - If case status is `accepted` or `rejected`:
       1. Invalidate the `NurseDecision` (FR-032)
@@ -654,26 +654,26 @@
 
 ### 9b. Audit Trail API
 
-- [ ] T069 [US7] Implement audit trail viewer endpoint in `backend/app/api/admin.py`:
+- [x] T069 [US7] Implement audit trail viewer endpoint in `backend/app/api/admin.py`:
   - `GET /api/admin/audit/{case_id}` — Admin only: returns complete chronological audit trail for a case (FR-041, FR-041a)
   - `GET /api/admin/audit` — Admin only: global audit log with filtering (date range, actor, action type)
   - Both endpoints return entries with all required fields: timestamp, actor identity, action type, model/version (if AI), confidence score (if AI), comment (if human) per FR-040d
 
 ### 9c. Admin Dashboard UI
 
-- [ ] T070 [US5] Create Admin Dashboard page — all-cases view — in `frontend/src/pages/AdminDashboard.tsx`:
+- [x] T070 [US5] Create Admin Dashboard page — all-cases view — in `frontend/src/pages/AdminDashboard.tsx`:
   - All-cases table: Case ID, service type, status, lock holder (if any), verification status, SLA clock, policy name
   - Inline case edit action: opens modal with editable fields (member_id, provider_id, cpt_code, icd_code, service_type) → PATCH endpoint (T068)
   - Warning confirmation for editing decided cases: "This will invalidate the existing decision and re-queue the case"
   - Nurse workload panel: table of nurses with locked-case count and decided-case count; click to view nurse's history
   - SearchBar component (T049) for NLP case search
-- [ ] T071 [US5] Add Audit Log viewer section to `frontend/src/pages/AdminDashboard.tsx` (same file as T070 — sequential; or sub-route `/admin/audit`):
+- [x] T071 [US5] Add Audit Log viewer section to `frontend/src/pages/AdminDashboard.tsx` (same file as T070 — sequential; or sub-route `/admin/audit`):
   - Case audit trail view: chronological timeline for a selected case
   - Each entry shows: timestamp, actor (user name or agent name), action, model/version (for AI), confidence (for AI), comment (for human decisions)
   - Expandable detail for input/output summaries
   - Filter controls: date range, actor, action type
   - Global audit view with pagination
-- [ ] T072 [US5] Add Nurse Account Management section to `frontend/src/pages/AdminDashboard.tsx` (same file as T070/T071 — sequential; or sub-route `/admin/users`):
+- [x] T072 [US5] Add Nurse Account Management section to `frontend/src/pages/AdminDashboard.tsx` (same file as T070/T071 — sequential; or sub-route `/admin/users`):
   - User list table: username, role, status (active/inactive), created date
   - Create user form: username, password, role dropdown (intake/nurse/admin)
   - Deactivate action per user (soft-delete)
