@@ -1,0 +1,56 @@
+# ===========================================================================
+# PA Evidence Assistant — .gitignore
+# ===========================================================================
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.so
+.venv/
+venv/
+env/
+.env
+*.env
+!.env.example
+dist/
+build/
+*.egg-info/
+.eggs/
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# --- Node / Frontend ---
+node_modules/
+frontend/dist/
+frontend/build/
+*.log
+
+# --- Docker / Secrets ---
+docker/.env
+docker/.env.*
+!docker/.env.example
+
+# --- IDE ---
+.vscode/
+.idea/
+*.suo
+*.user
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp
+
+# --- Alembic generated (keep versions/ files) ---
+# (migration files are committed — no ignore here)
+
+# --- Test artifacts ---
+*.coverage
+junit.xml
+test-results/

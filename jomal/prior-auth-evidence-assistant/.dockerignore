@@ -1,0 +1,48 @@
+# ===========================================================================
+# PA Evidence Assistant — .dockerignore
+# ===========================================================================
+
+# --- Version control ---
+.git/
+.gitignore
+
+# --- Python ---
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+
+# --- Secrets ---
+.env
+*.env
+docker/.env
+
+# --- Frontend (separate build step) ---
+frontend/node_modules/
+frontend/dist/
+frontend/.next/
+
+# --- Specs and docs ---
+specs/
+*.md
+!README.md
+
+# --- IDE ---
+.vscode/
+.idea/
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+*.tmp
+*.log
+
+# --- Test artifacts ---
+tests/

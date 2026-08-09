@@ -1,0 +1,110 @@
+# Prior Authorization Evidence Assistant - Docker Infrastructure Stack
+# Services: PostgreSQL 16, Qdrant, Text-Embeddings-Inference (TEI), MinIO
+# NO Redis, NO Celery, NO reverse-proxy container.
+# Ollama runs NATIVELY on the host — not in Docker.
+#
+# Usage:
+#   cd docker/
+#   cp .env.example .env   # fill in secrets
+#   docker compose up -d
+#
+# ⚠️ VRAM budget: TEI + Ollama (llama3.2:3b) + EasyOCR must fit in 6 GB total.
+#    TEI conservative limits: --max-batch-tokens 2048 --max-concurrent-requests 32
+
+services:
+
+  postgres:
+    image: postgres:16
+    container_name: pa_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-pa_assistant}
+      POSTGRES_USER: ${POSTGRES_USER:-pa_app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme_use_secrets_manager}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pa_app} -d ${POSTGRES_DB:-pa_assistant}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - pa_network
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: pa_qdrant
+    restart: unless-stopped
+    ports:
+      - "6333:6333"   # HTTP / REST + gRPC
+      - "6334:6334"   # gRPC
+    volumes:
+      - qdrant_data:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/localhost/6333 && echo -e \"GET /healthz HTTP/1.0\\r\\n\\r\\n\" >&3 && head -1 <&3 | grep 200' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - pa_network
+
+  tei:
+    # HuggingFace Text-Embeddings-Inference — CPU. bge-small-en-v1.5 is small enough that CPU
+    # inference is fast, and it keeps the full GPU budget free for Ollama + EasyOCR, which is
+    # the more contention-sensitive pairing on this hardware (RTX 4050, 6GB).
+    image: ghcr.io/huggingface/text-embeddings-inference:cpu-1.9
+    container_name: pa_tei
+    restart: unless-stopped
+    command: --model-id BAAI/bge-small-en-v1.5 --max-batch-tokens 2048 --max-concurrent-requests 32
+    ports:
+      - "8080:80"
+    volumes:
+      - tei_model_cache:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:80/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
+    networks:
+      - pa_network
+
+  minio:
+    image: minio/minio:latest
+    container_name: pa_minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-pa_app}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-changeme_use_secrets_manager}
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # Web console
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9000/minio/health/live || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - pa_network
+
+volumes:
+  postgres_data:
+    driver: local
+  qdrant_data:
+    driver: local
+  tei_model_cache:
+    driver: local
+  minio_data:
+    driver: local
+
+networks:
+  pa_network:
+    driver: bridge
