@@ -17,6 +17,14 @@ interface PolicyListItem {
     requirement_count?: number;
 }
 
+interface PolicyDetail {
+    id: string;
+    name: string;
+    description?: string | null;
+    is_active: boolean;
+    requirements: PolicyRequirement[];
+}
+
 const formatDate = (iso?: string) => {
     if (!iso) return '—';
     try {
@@ -41,6 +49,12 @@ const PolicyManagement: React.FC = () => {
     const [requirements, setRequirements] = useState<PolicyRequirement[]>([]);
     const [deactivatingId, setDeactivatingId] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // View policy detail modal
+    const [viewPolicyId, setViewPolicyId] = useState<string | null>(null);
+    const [viewPolicy, setViewPolicy] = useState<PolicyDetail | null>(null);
+    const [viewLoading, setViewLoading] = useState(false);
+    const [viewError, setViewError] = useState<string | null>(null);
 
     useEffect(() => {
         fetchPolicies();
@@ -99,6 +113,27 @@ const PolicyManagement: React.FC = () => {
         } finally {
             setLoading(false);
         }
+    };
+
+    const openPolicy = async (id: string) => {
+        setViewPolicyId(id);
+        setViewPolicy(null);
+        setViewError(null);
+        setViewLoading(true);
+        try {
+            const res = await api.get(`/api/policies/${id}`);
+            setViewPolicy(res.data);
+        } catch (err: any) {
+            setViewError(err.response?.data?.detail || 'Failed to load policy details.');
+        } finally {
+            setViewLoading(false);
+        }
+    };
+
+    const closePolicyView = () => {
+        setViewPolicyId(null);
+        setViewPolicy(null);
+        setViewError(null);
     };
 
     const handleDeactivate = async (id: string, policyName: string) => {
@@ -255,7 +290,12 @@ const PolicyManagement: React.FC = () => {
 
                             {!policiesLoading &&
                                 policies.map((p) => (
-                                    <tr key={p.id}>
+                                    <tr
+                                        key={p.id}
+                                        style={{ cursor: 'pointer' }}
+                                        onClick={() => openPolicy(p.id)}
+                                        title="Click to view policy details"
+                                    >
                                         <td className="table-name">{p.name}</td>
                                         <td>
                                             {p.is_active === false ? (
@@ -275,7 +315,7 @@ const PolicyManagement: React.FC = () => {
                                             {p.is_active !== false && (
                                                 <button
                                                     className="btn btn-danger btn-sm"
-                                                    onClick={() => handleDeactivate(p.id, p.name)}
+                                                    onClick={(e) => { e.stopPropagation(); handleDeactivate(p.id, p.name); }}
                                                     disabled={deactivatingId === p.id}
                                                 >
                                                     {deactivatingId === p.id && <span className="spinner" style={{ borderTopColor: 'var(--danger)', borderColor: 'rgba(174,42,32,0.25)' }} />}
@@ -289,6 +329,79 @@ const PolicyManagement: React.FC = () => {
                     </table>
                 </div>
             </div>
+
+            {viewPolicyId && (
+                <div
+                    style={{
+                        position: 'fixed', inset: 0, background: 'rgba(10,16,22,0.55)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 24,
+                    }}
+                    onClick={closePolicyView}
+                >
+                    <div
+                        className="card"
+                        style={{ width: 620, maxWidth: '100%', maxHeight: '86vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div style={{ padding: '18px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <div>
+                                <div style={{ fontWeight: 700, fontSize: 16 }}>
+                                    {viewPolicy?.name || 'Policy details'}
+                                </div>
+                                {viewPolicy && (
+                                    <div style={{ marginTop: 4 }}>
+                                        {viewPolicy.is_active ? (
+                                            <span className="badge badge-success"><span className="badge-dot" /> Active</span>
+                                        ) : (
+                                            <span className="badge badge-neutral"><span className="badge-dot" /> Inactive</span>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                            <button className="btn btn-ghost btn-sm" onClick={closePolicyView}>✕</button>
+                        </div>
+
+                        <div style={{ padding: 24, overflowY: 'auto', flex: 1 }}>
+                            {viewLoading ? (
+                                <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)' }}>
+                                    <span className="spinner spinner-dark" />
+                                </div>
+                            ) : viewError ? (
+                                <div className="banner banner-error">
+                                    <IconAlert width={16} height={16} />
+                                    <span>{viewError}</span>
+                                </div>
+                            ) : viewPolicy ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                                    {viewPolicy.description && (
+                                        <p style={{ margin: 0, fontSize: 13.75, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                                            {viewPolicy.description}
+                                        </p>
+                                    )}
+                                    <div>
+                                        <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10 }}>
+                                            Requirements ({viewPolicy.requirements.length})
+                                        </div>
+                                        {viewPolicy.requirements.length === 0 ? (
+                                            <p style={{ color: 'var(--text-muted)', fontSize: 13.5 }}>
+                                                No requirements were extracted for this policy.
+                                            </p>
+                                        ) : (
+                                            <ul style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                                {viewPolicy.requirements.map((r) => (
+                                                    <li key={r.id} style={{ fontSize: 13.75, color: 'var(--text-secondary)' }}>
+                                                        {r.text}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        )}
+                                    </div>
+                                </div>
+                            ) : null}
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     );
 };

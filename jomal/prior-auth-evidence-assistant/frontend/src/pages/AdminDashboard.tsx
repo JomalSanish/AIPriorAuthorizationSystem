@@ -3,8 +3,10 @@
  * Tabs: All Cases | Nurse Workload | User Management | Audit Log
  */
 import React, { useState, useCallback, useEffect } from 'react';
-import AppLayout from '../components/AppLayout';
 import api from '../services/api';
+import EvidenceSummary from '../components/EvidenceSummary';
+import DocumentViewer from '../components/DocumentViewer';
+import SearchBar, { type CaseSearchResult } from '../components/SearchBar';
 
 // ============================================================================
 // Types
@@ -190,6 +192,168 @@ function EditCaseModal({ caseRow, onClose, onSaved }: EditModalProps) {
 }
 
 // ============================================================================
+// View Case Modal — read-only case detail (metadata + AI summary + documents)
+// ============================================================================
+
+interface CaseSummaryData {
+  case_id: string;
+  status: string;
+  summary_available: boolean;
+  summary_text: string | null;
+  summary_metadata: { gap_count?: number; flags?: string[] } | null;
+  verdicts: {
+    requirement_id: string;
+    requirement_text: string;
+    classification: 'Present' | 'Absent' | 'Unclear';
+    composite_confidence: number;
+    retrieval_score: number;
+    llm_confidence: number;
+    citation?: { document_name?: string; page_number?: number; relevant_excerpt?: string } | null;
+    reasoning_text?: string;
+  }[];
+  documents: {
+    id: string;
+    original_filename: string;
+    file_type: string;
+    ocr_status: string;
+    extracted_text_length: number;
+  }[];
+}
+
+interface ViewCaseModalProps {
+  caseRow: CaseRow;
+  onClose: () => void;
+}
+
+function ViewCaseModal({ caseRow, onClose }: ViewCaseModalProps) {
+  const [tab, setTab] = useState<'details' | 'summary' | 'documents'>('details');
+  const [summary, setSummary] = useState<CaseSummaryData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    api.get(`/api/cases/${caseRow.case_id}/summary`)
+      .then(res => { if (!cancelled) setSummary(res.data); })
+      .catch(e => { if (!cancelled) setError(e?.response?.data?.detail || 'Failed to load case details'); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [caseRow.case_id]);
+
+  const infoRow = (label: string, value: React.ReactNode) => (
+    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
+      <span style={{ color: 'var(--text-muted)', fontSize: 12.5 }}>{label}</span>
+      <span style={{ fontSize: 13, fontWeight: 500, textAlign: 'right' }}>{value}</span>
+    </div>
+  );
+
+  return (
+    <div
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(10,16,22,0.55)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 24,
+      }}
+      onClick={onClose}
+    >
+      <div
+        className="card"
+        style={{ width: 760, maxWidth: '100%', maxHeight: '86vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div style={{ padding: '18px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 16 }}>Case Details</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', marginTop: 2 }}>
+              {caseRow.case_id}
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <StatusBadge status={caseRow.status} />
+            <button className="btn btn-ghost btn-sm" onClick={onClose}>✕</button>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', padding: '0 24px' }}>
+          {(['details', 'summary', 'documents'] as const).map(t => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              style={{
+                padding: '10px 18px', background: 'none', border: 'none',
+                borderBottom: tab === t ? '2px solid var(--primary)' : '2px solid transparent',
+                marginBottom: -1, cursor: 'pointer',
+                fontWeight: tab === t ? 700 : 400,
+                color: tab === t ? 'var(--primary)' : 'var(--text-secondary)',
+                fontSize: 13, textTransform: 'capitalize',
+              }}
+            >
+              {t === 'details' ? 'Case Info' : t === 'summary' ? 'AI Evidence Summary' : 'Documents'}
+            </button>
+          ))}
+        </div>
+
+        {/* Body */}
+        <div style={{ padding: 24, overflowY: 'auto', flex: 1 }}>
+          {tab === 'details' && (
+            <div>
+              {infoRow('Policy', caseRow.policy_name)}
+              {infoRow('Service type', caseRow.service_type || '—')}
+              {infoRow('Member ID', caseRow.member_id || '—')}
+              {infoRow('Provider ID', caseRow.provider_id || '—')}
+              {infoRow('CPT code', caseRow.cpt_code || '—')}
+              {infoRow('ICD code', caseRow.icd_code || '—')}
+              {infoRow('Lock holder', caseRow.lock_holder || '—')}
+              {infoRow('SLA started', caseRow.sla_start_at ? new Date(caseRow.sla_start_at).toLocaleString() : '—')}
+              {infoRow('Decided at', caseRow.decided_at ? new Date(caseRow.decided_at).toLocaleString() : '—')}
+              {infoRow('Created at', new Date(caseRow.created_at).toLocaleString())}
+            </div>
+          )}
+
+          {tab === 'summary' && (
+            loading ? (
+              <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)' }}>Loading summary…</div>
+            ) : error ? (
+              <div className="banner banner-error">{error}</div>
+            ) : !summary?.summary_available ? (
+              <div
+                style={{
+                  background: 'var(--amber-soft)', border: '1px solid var(--amber-soft-border)',
+                  borderRadius: 'var(--radius)', padding: '16px 20px', color: 'var(--amber)', fontSize: 14,
+                }}
+              >
+                AI summary not yet available for this case. Review documents manually.
+              </div>
+            ) : (
+              <EvidenceSummary
+                summary={{
+                  summary_text: summary.summary_text || '',
+                  flags: summary.summary_metadata?.flags,
+                  verdicts: summary.verdicts,
+                }}
+              />
+            )
+          )}
+
+          {tab === 'documents' && (
+            loading ? (
+              <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)' }}>Loading documents…</div>
+            ) : error ? (
+              <div className="banner banner-error">{error}</div>
+            ) : (
+              <DocumentViewer caseId={caseRow.case_id} documents={summary?.documents || []} />
+            )
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
 // All Cases Tab — T070
 // ============================================================================
 
@@ -197,6 +361,7 @@ function AllCasesTab() {
   const [cases, setCases] = useState<CaseRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [editCase, setEditCase] = useState<CaseRow | null>(null);
+  const [viewCase, setViewCase] = useState<CaseRow | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -208,15 +373,35 @@ function AllCasesTab() {
 
   useEffect(() => { load(); }, [load]);
 
+  const handleSearchSelect = (result: CaseSearchResult) => {
+    const match = cases.find(c => c.case_id === result.case_id);
+    if (match) {
+      setViewCase(match);
+    } else {
+      alert('Could not find that case in the current list.');
+    }
+  };
+
   if (loading) return <div style={{ padding: 32, color: 'var(--text-muted)' }}>Loading cases…</div>;
 
   return (
     <div>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+        <div style={{ width: 320 }}>
+          <SearchBar onSelect={handleSearchSelect} />
+        </div>
+      </div>
       {editCase && (
         <EditCaseModal
           caseRow={editCase}
           onClose={() => setEditCase(null)}
           onSaved={async () => { setEditCase(null); await load(); }}
+        />
+      )}
+      {viewCase && (
+        <ViewCaseModal
+          caseRow={viewCase}
+          onClose={() => setViewCase(null)}
         />
       )}
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
@@ -233,7 +418,16 @@ function AllCasesTab() {
               {cases.length === 0 ? (
                 <tr><td colSpan={9} style={{ ...tdStyle, textAlign: 'center', color: 'var(--text-muted)', padding: 32 }}>No cases found</td></tr>
               ) : cases.map((c, i) => (
-                <tr key={c.case_id} style={{ borderBottom: '1px solid var(--border)', background: i % 2 === 0 ? 'var(--surface)' : 'var(--surface-sunken)' }}>
+                <tr
+                  key={c.case_id}
+                  style={{
+                    borderBottom: '1px solid var(--border)',
+                    background: i % 2 === 0 ? 'var(--surface)' : 'var(--surface-sunken)',
+                    cursor: 'pointer',
+                  }}
+                  onClick={() => setViewCase(c)}
+                  title="Click to view case details"
+                >
                   <td style={tdStyle}>
                     <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11 }}>{c.case_id.slice(0, 8)}…</span>
                   </td>
@@ -254,7 +448,7 @@ function AllCasesTab() {
                     <button
                       id={`btn-edit-case-${c.case_id.slice(0, 8)}`}
                       className="btn btn-ghost btn-sm"
-                      onClick={() => setEditCase(c)}
+                      onClick={e => { e.stopPropagation(); setEditCase(c); }}
                     >
                       Edit
                     </button>
@@ -662,8 +856,7 @@ const AdminDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>('All Cases');
 
   return (
-    <AppLayout>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
         {/* Header */}
         <div>
           <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>Admin Dashboard</h1>
@@ -699,7 +892,6 @@ const AdminDashboard: React.FC = () => {
         {activeTab === 'User Management' && <UserManagementTab />}
         {activeTab === 'Audit Log'       && <AuditLogTab />}
       </div>
-    </AppLayout>
   );
 };
 

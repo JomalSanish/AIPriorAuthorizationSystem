@@ -693,29 +693,29 @@
 
 ### 10a. Unit Tests — Agents
 
-- [ ] T073 [P] Create Workflow Agent unit tests in `backend/tests/unit/test_workflow_agent.py`:
+- [x] T073 [P] Create Workflow Agent unit tests in `backend/tests/unit/test_workflow_agent.py`:
   - Test planner action whitelist validation (rejects invalid actions)
   - Test turn budget enforcement (forces finalize after N turns)
   - Test Summary-required guardrail (rejects finalize without Summary)
   - Test no accept/reject action exists in whitelist
   - Test case status transition validation
-- [ ] T074 [P] Create Intake Agent unit tests in `backend/tests/unit/test_intake_agent.py`:
+- [x] T074 [P] Create Intake Agent unit tests in `backend/tests/unit/test_intake_agent.py`:
   - Test policy ingestion: requirement extraction, chunking, embedding call sequence
   - Test case document processing: OCR fallback, extraction failure handling
   - Test metadata extraction: structured output parsing
   - Test case_profile generation
-- [ ] T075 [P] Create Retrieval Agent unit tests in `backend/tests/unit/test_retrieval_agent.py`:
+- [x] T075 [P] Create Retrieval Agent unit tests in `backend/tests/unit/test_retrieval_agent.py`:
   - Test hybrid search call with dense + sparse vectors
   - Test RRF fusion result ordering
   - Test query augmentation parameter
   - Test NLP search query parsing (structured output validation)
   - Test role-based visibility filtering on search results
-- [ ] T076 [P] Create Reasoning Agent unit tests in `backend/tests/unit/test_reasoning_agent.py`:
+- [x] T076 [P] Create Reasoning Agent unit tests in `backend/tests/unit/test_reasoning_agent.py`:
   - Test Present/Absent/Unclear classification
   - Test citation extraction for Present/Unclear verdicts
   - Test composite confidence score computation (0.4×retrieval + 0.6×llm)
   - Test all-absent case when no evidence found
-- [ ] T077 [P] Create Summary Agent unit tests in `backend/tests/unit/test_summary_agent.py`:
+- [x] T077 [P] Create Summary Agent unit tests in `backend/tests/unit/test_summary_agent.py`:
   - Test evidence summary generation from verdicts
   - Test gap checklist: separate Absent and Unclear sections
   - Test pipeline-incomplete flag
@@ -723,50 +723,50 @@
 
 ### 10b. Unit Tests — Services
 
-- [ ] T078 [P] Create GPU Guard unit tests in `backend/tests/unit/test_gpu_guard.py`:
+- [x] T078 [P] Create GPU Guard unit tests in `backend/tests/unit/test_gpu_guard.py`:
   - Test LLM priority acquisition
   - Test OCR timeout and CPU fallback
   - Test concurrent access blocking
   - Test contention event logging
-- [ ] T079 [P] Create OCR pipeline unit tests in `backend/tests/unit/test_ocr.py`:
+- [x] T079 [P] Create OCR pipeline unit tests in `backend/tests/unit/test_ocr.py`:
   - Test image preprocessing steps (grayscale, deskew, denoise, binarize, contrast)
   - Test EasyOCR GPU → CPU fallback
   - Test zero-text extraction failure handling
-- [ ] T080 [P] Create document parser unit tests in `backend/tests/unit/test_document.py`:
+- [x] T080 [P] Create document parser unit tests in `backend/tests/unit/test_document.py`:
   - Test PDF parsing (native text + OCR fallback pages)
   - Test DOCX parsing
   - Test TXT/MD parsing
   - Test SHA-256 hash computation
-- [ ] T080a [P] Create PHI-minimization tests in `backend/tests/unit/test_prompt_minimization.py`:
+- [x] T080a [P] Create PHI-minimization tests in `backend/tests/unit/test_prompt_minimization.py`:
   - Assert the Intake metadata-extraction prompt (T040) contains only the target document's text
   - Assert the Reasoning classification prompt (T050) contains only the requirement text + its retrieved chunks — not other requirements' evidence or other cases' data
   - Assert Summary Agent output (T052) never contains a verbatim block matching more than a short threshold (e.g. 40 words) of any source document's raw text — citations should be short excerpts, not reproductions (FR-043b)
 
 ### 10c. Integration Tests — API Endpoints
 
-- [ ] T081 [P] Create auth endpoint integration tests in `backend/tests/integration/test_auth.py`:
+- [x] T081 [P] Create auth endpoint integration tests in `backend/tests/integration/test_auth.py`:
   - Test login flow (valid credentials → tokens)
   - Test refresh flow
   - Test role-based access denial for all cross-role combinations (SC-006)
   - Test failed auth attempt logging (FR-040b)
-- [ ] T082 [P] Create policy endpoint integration tests in `backend/tests/integration/test_policies.py`:
+- [x] T082 [P] Create policy endpoint integration tests in `backend/tests/integration/test_policies.py`:
   - Test policy upload + ingestion (US1 acceptance scenarios)
   - Test policy name appears in dropdown (non-Admin roles)
   - Test non-Admin access denial
   - Test policy deactivation (FR-009a)
-- [ ] T083 [P] Create case endpoint integration tests in `backend/tests/integration/test_cases.py`:
+- [x] T083 [P] Create case endpoint integration tests in `backend/tests/integration/test_cases.py`:
   - Test case creation + document upload + metadata extraction (US2 acceptance scenarios)
   - Test case submission triggers pipeline
   - Test all-documents-failed warning and confirmation (FR-013a)
   - Test case immutability for Intake after submission (FR-012a)
-- [ ] T084 [P] Create nurse review integration tests in `backend/tests/integration/test_nurse_review.py`:
+- [x] T084 [P] Create nurse review integration tests in `backend/tests/integration/test_nurse_review.py`:
   - Test queue shows metadata only (US4 acceptance scenarios)
   - Test lock acquisition and mutual exclusion
   - Test concurrent lock attempt fails
   - Test decision recording with mandatory comment
   - Test lock auto-release after expiry
   - Test decision appears in history
-- [ ] T085 [P] Create admin integration tests in `backend/tests/integration/test_admin.py`:
+- [x] T085 [P] Create admin integration tests in `backend/tests/integration/test_admin.py`:
   - Test all-cases view (US5 acceptance scenarios)
   - Test case intervention invalidates decision (FR-032, SC-009)
   - Test re-verification routing
@@ -775,7 +775,7 @@
 
 ### 10d. End-to-End Case Lifecycle Test
 
-- [ ] T086 Create end-to-end case lifecycle test in `backend/tests/integration/test_e2e_lifecycle.py`:
+- [x] T086 Create end-to-end case lifecycle test in `backend/tests/integration/test_e2e_lifecycle.py`:
   - Full path: Admin creates policy → Intake creates case → Pipeline processes → Nurse locks → Nurse decides → Admin modifies → Re-verification → Nurse re-decides
   - Verify audit trail contains every step (SC-005)
   - Verify SLA clock runs continuously (FR-023a)
@@ -784,11 +784,11 @@
 
 ### 10e. Offline Ragas RAG Evaluation Harness
 
-- [ ] T087 Create synthetic golden dataset schema in `backend/tests/evaluation/golden_dataset.py`:
+- [x] T087 Create synthetic golden dataset schema in `backend/tests/evaluation/golden_dataset.py`:
   - `GoldenSample` dataclass: `case_document_text`, `policy_requirement`, `expected_retrieved_chunks`, `expected_verdict` (Present/Absent/Unclear), `expected_citation`
   - `load_golden_dataset(path) → list[GoldenSample]` — loads from JSON file
   - Create initial synthetic golden dataset file in `backend/tests/evaluation/data/golden_samples.json` with 10–15 synthetic samples (synthetic clinical scenarios, never real PHI per FR-044)
-- [ ] T088 Create Ragas evaluation harness in `backend/tests/evaluation/test_rag_evaluation.py`:
+- [x] T088 Create Ragas evaluation harness in `backend/tests/evaluation/test_rag_evaluation.py`:
   - Configure judge LLM via `LangchainLLMWrapper` pointed at local Ollama (not a hosted API)
     > **⚠️ FLAG (external network)**: The Ragas judge LLM MUST use `LangchainLLMWrapper` pointed at the local Ollama instance. Ragas defaults to OpenAI if no wrapper is provided — this MUST be overridden. Verify no `OPENAI_API_KEY` is set or referenced.
   - Configure judge embeddings via `LangchainEmbeddingsWrapper` pointed at local TEI
@@ -801,7 +801,7 @@
     - Faithfulness ≥ 0.80
   - Output: per-sample scores + aggregate scores + pass/fail verdict
     > **⚠️ FLAG (known risk)**: Small local judge models (llama3.2:3b) may produce NaN scores due to failure to generate the structured output Ragas expects internally. After implementing this harness, run on 3–5 samples and confirm non-NaN scores BEFORE relying on it as a regression gate. If NaN scores appear, consider using a larger judge model on the dev machine (which may have more VRAM headroom than the deployment target).
-- [ ] T089 Verify Ragas harness isolation from live pipeline in `backend/tests/evaluation/test_rag_evaluation.py`:
+- [x] T089 Verify Ragas harness isolation from live pipeline in `backend/tests/evaluation/test_rag_evaluation.py`:
   - Assert: no import of `WorkflowAgent`, no write to production `audit_log`, no mutation of live case data
   - Assert: evaluation runs against a separate test database or in-memory fixtures, never the live Postgres
   - This harness is dev/CI only — must never be wired into the Workflow Agent pipeline (spec: "never part of the live case pipeline")
