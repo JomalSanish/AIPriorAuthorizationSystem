@@ -4,9 +4,11 @@ Case Management API Endpoints.
 
 import uuid
 import hashlib
+import json
 from datetime import datetime, timezone
 from typing import List, Optional
 from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException, BackgroundTasks
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from pydantic import BaseModel
@@ -355,4 +357,122 @@ async def get_case(
         "status": case.status.value,
         "sla_start_at": case.sla_start_at,
         "created_at": case.created_at
+    }
+
+
+# ---------------------------------------------------------------------------
+# Phase 8 — Document download (for DocumentViewer, T065)
+# ---------------------------------------------------------------------------
+
+@router.get("/{case_id}/documents/{doc_id}/download")
+async def download_document(
+    case_id: uuid.UUID,
+    doc_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Download a case document as a binary stream. Nurse must hold the lock."""
+    from app.db.models import CaseLock, CaseStatus
+
+    doc = await db.get(CaseDocument, doc_id)
+    if not doc or doc.case_id != case_id:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    # Verify nurse has the lock (FR-023: documents only accessible post-lock)
+    if current_user.role.value == "nurse":
+        lock_result = await db.execute(
+            select(CaseLock).where(CaseLock.case_id == case_id)
+        )
+        lock = lock_result.scalar_one_or_none()
+        if not lock or lock.nurse_id != current_user.id:
+            raise HTTPException(
+                status_code=403,
+                detail="You must lock this case before accessing documents (FR-023)"
+            )
+
+    bucket = "pa-case-documents"
+    file_bytes = minio_service.download_file(bucket, doc.minio_object_key)
+    content_type = doc.file_type or "application/octet-stream"
+
+    import io
+    return StreamingResponse(
+        io.BytesIO(file_bytes),
+        media_type=content_type,
+        headers={"Content-Disposition": f'inline; filename="{doc.original_filename}"'},
+    )
+
+
+# ---------------------------------------------------------------------------
+# Phase 8 — Case summary endpoint (returns audit log summary payload for UI)
+# ---------------------------------------------------------------------------
+
+@router.get("/{case_id}/summary")
+async def get_case_summary(
+    case_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Return the AI-generated evidence summary and verdicts for a case.
+    Only accessible to a nurse who holds the lock, or to Admin (FR-023).
+    """
+    from app.db.models import AuditLog, CaseLock
+
+    case = await db.get(Case, case_id)
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found")
+
+    # FR-023: nurse must hold lock
+    if current_user.role.value == "nurse":
+        lock_result = await db.execute(
+            select(CaseLock).where(CaseLock.case_id == case_id)
+        )
+        lock = lock_result.scalar_one_or_none()
+        if not lock or lock.nurse_id != current_user.id:
+            raise HTTPException(
+                status_code=403,
+                detail="You must lock this case before viewing its summary (FR-023)"
+            )
+
+    # Retrieve the latest summary_generated audit entry payload
+    audit_result = await db.execute(
+        select(AuditLog)
+        .where(AuditLog.case_id == case_id, AuditLog.action == "summary_generated")
+        .order_by(AuditLog.timestamp.desc())
+        .limit(1)
+    )
+    summary_log = audit_result.scalar_one_or_none()
+
+    # Retrieve reasoning_verdict audit entries for per-req verdicts
+    verdict_result = await db.execute(
+        select(AuditLog)
+        .where(AuditLog.case_id == case_id, AuditLog.action == "reasoning_verdict")
+        .order_by(AuditLog.timestamp.desc())
+        .limit(1)
+    )
+    verdict_log = verdict_result.scalar_one_or_none()
+
+    # Retrieve case documents metadata
+    docs_result = await db.execute(
+        select(CaseDocument).where(CaseDocument.case_id == case_id)
+    )
+    documents = docs_result.scalars().all()
+
+    return {
+        "case_id": str(case_id),
+        "status": case.status.value,
+        "summary_available": summary_log is not None,
+        "summary_text": summary_log.output_summary if summary_log else None,
+        "summary_metadata": summary_log.metadata_ if summary_log else None,
+        "verdict_summary": verdict_log.output_summary if verdict_log else None,
+        "documents": [
+            {
+                "id": str(d.id),
+                "original_filename": d.original_filename,
+                "file_type": d.file_type,
+                "ocr_status": d.ocr_status.value,
+                "extracted_text_length": d.extracted_text_length,
+            }
+            for d in documents
+        ],
     }

@@ -32,7 +32,7 @@ from app.db.database import get_db
 from app.db.models import AuditLog, ActorType, User, UserRole
 
 logger = logging.getLogger("pa.admin")
-router = APIRouter(prefix="/api/admin", tags=["admin"])
+router = APIRouter(tags=["admin"])
 
 # Shared guard: Admin only
 _admin_guard = require_role("admin")

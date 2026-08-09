@@ -557,14 +557,14 @@
 
 ### 8a. Case Locking API
 
-- [ ] T058 [US4] Implement case locking endpoints in `backend/app/api/nurse_review.py`:
+- [x] T058 [US4] Implement case locking endpoints in `backend/app/api/nurse_review.py`:
   - `POST /api/nurse-review/{case_id}/lock` — Nurse only: creates CaseLock record (case_id, nurse_id, locked_at, lock_expires_at = now + 24h); fails with 409 if already locked by another nurse (FR-025); writes audit entry for `case_locked`
   - `DELETE /api/nurse-review/{case_id}/lock` — Nurse only (lock owner) or Admin: releases lock; writes audit entry
   - `GET /api/nurse-review/queue` — Nurse + Admin: returns cases with status `pending_nurse_review` or `error`, showing metadata only (Case ID, service type, submitted date, SLA clock, lock status) — no summary/evidence/documents (FR-023)
 
 ### 8b. APScheduler Lock Auto-Release
 
-- [ ] T059 [US4] Implement APScheduler lock auto-release job in `backend/app/services/scheduler.py`:
+- [x] T059 [US4] Implement APScheduler lock auto-release job in `backend/app/services/scheduler.py`:
   - `release_expired_locks()`:
     - Query `CaseLock` for records where `lock_expires_at < now()`
     - For each expired lock: delete the CaseLock record, write audit entry for `case_lock_auto_released` (FR-040a)
@@ -574,7 +574,7 @@
 
 ### 8c. Nurse Decision API
 
-- [ ] T060 [US4] Implement nurse decision endpoint in `backend/app/api/nurse_review.py`:
+- [x] T060 [US4] Implement nurse decision endpoint in `backend/app/api/nurse_review.py`:
   - `POST /api/nurse-review/{case_id}/decide` — Nurse only (lock owner): body `{decision: "accepted"|"rejected", comment: str (required)}`
     - Validates: case is locked by this nurse, comment is non-empty (FR-028)
     - Creates `NurseDecision` record
@@ -586,13 +586,13 @@
 
 ### 8d. Nurse Review UI
 
-- [ ] T061 [P] [US4] Create Nurse Review queue page in `frontend/src/pages/NurseReview.tsx`:
+- [x] T061 [P] [US4] Create Nurse Review queue page in `frontend/src/pages/NurseReview.tsx`:
   - Queue table: Case ID, service type, submitted date, SLA clock (live timer), lock status indicator, "Re-verification Required" flag, "Error / Manual Review" flag
   - No summary/evidence/document content visible before locking (FR-023)
   - "Lock" button per unlocked case → `POST /api/nurse-review/{case_id}/lock`
   - Locked-by-another indicator for cases locked by other nurses
   - SearchBar component (T049) for NLP case search
-- [ ] T062 [P] [US4] Create Case Detail page for locked cases in `frontend/src/pages/CaseDetail.tsx`:
+- [x] T062 [P] [US4] Create Case Detail page for locked cases in `frontend/src/pages/CaseDetail.tsx`:
   - Accessible only after locking (redirects back to queue if not locked by current user)
   - Tab layout: "Evidence Summary" | "Documents" (nurse's choice which to view first, FR-027)
   - Evidence Summary tab: renders `CaseSummary` (T052) with:
@@ -602,23 +602,23 @@
     - Pipeline warning flags (turn budget hit, extraction failures)
   - Documents tab: list of case documents with viewer (PDF inline viewer or text display)
   - Decision panel: Accept / Reject radio + mandatory comment textarea + Submit button
-- [ ] T063 [P] [US4] Create EvidenceSummary component in `frontend/src/components/EvidenceSummary.tsx`:
+- [x] T063 [P] [US4] Create EvidenceSummary component in `frontend/src/components/EvidenceSummary.tsx`:
   - Renders the structured evidence summary with classification badges, confidence bars, and citations
   - Separate sections for Present, Absent, Unclear requirements
-- [ ] T064 [P] [US4] Create GapChecklist component in `frontend/src/components/GapChecklist.tsx`:
+- [x] T064 [P] [US4] Create GapChecklist component in `frontend/src/components/GapChecklist.tsx`:
   - "Absent" items: red indicator, requirement text, "No evidence found" label
   - "Unclear" items: amber indicator, requirement text, ambiguous citation displayed inline for Nurse evaluation
-- [ ] T065 [P] [US4] Create DocumentViewer component in `frontend/src/components/DocumentViewer.tsx`:
+- [x] T065 [P] [US4] Create DocumentViewer component in `frontend/src/components/DocumentViewer.tsx`:
   - Renders case documents: PDF inline viewer (using browser PDF rendering or react-pdf), text/MD rendered as formatted text
   - Document list sidebar with filename, type badge, OCR status indicator, "Extraction Failed" flag
-- [ ] T066 [US4] Create Nurse History tab in `frontend/src/pages/NurseReview.tsx`:
+- [x] T066 [US4] Create Nurse History tab in `frontend/src/pages/NurseReview.tsx`:
   - Tab within Nurse Review section: "Queue" | "History"
   - History table: Case ID, service type, decision (Accepted/Rejected badge), comment preview, decided date
   - Click to view read-only case detail (no re-decision)
 
 ### 8e. Polling for Status Updates
 
-- [ ] T067 [US4] Implement polling for case status and lock updates in frontend:
+- [x] T067 [US4] Implement polling for case status and lock updates in frontend:
   - `usePolling` hook in `frontend/src/hooks/usePolling.ts`:
     - Configurable interval (default 15 seconds)
     - Polls `GET /api/cases` or `GET /api/nurse-review/queue` for status changes

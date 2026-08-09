@@ -12,7 +12,11 @@ const TITLES: Record<string, string> = {
     '/admin/users': 'User Management',
 };
 
-const pageTitleFor = (pathname: string): string => TITLES[pathname] || 'PA Evidence Assistant';
+const pageTitleFor = (pathname: string): string => {
+    if (TITLES[pathname]) return TITLES[pathname];
+    if (pathname.startsWith('/nurse-review/')) return 'Case Detail';
+    return 'PA Evidence Assistant';
+};
 
 const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { user, logout } = useAuth();

@@ -6,6 +6,8 @@ import Login from './pages/Login';
 import PolicyManagement from './pages/PolicyManagement';
 import CaseManagement from './pages/CaseManagement';
 import NewCase from './pages/NewCase';
+import NurseReview from './pages/NurseReview';
+import CaseDetail from './pages/CaseDetail';
 import PlaceholderPage from './pages/PlaceholderPage';
 
 /** Sends an already-authenticated visitor away from /login and / to their landing page. */
@@ -43,12 +45,15 @@ function App() {
                         path="/nurse-review"
                         element={
                             <ProtectedRoute roles={['nurse', 'admin']}>
-                                <PlaceholderPage
-                                    eyebrow="Nurse Review"
-                                    title="Review Queue"
-                                    description="Metadata-only queue with case locking. Evidence and documents unlock only after a case is claimed."
-                                    phase="Phase 6"
-                                />
+                                <NurseReview />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/nurse-review/:caseId"
+                        element={
+                            <ProtectedRoute roles={['nurse', 'admin']}>
+                                <CaseDetail />
                             </ProtectedRoute>
                         }
                     />

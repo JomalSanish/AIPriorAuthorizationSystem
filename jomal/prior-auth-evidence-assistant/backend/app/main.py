@@ -19,7 +19,7 @@ from typing import Any
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import auth, admin, policies, cases
+from app.api import auth, admin, policies, cases, nurse_review
 from app.config import get_settings
 
 logger = logging.getLogger("pa.main")
@@ -89,11 +89,20 @@ async def lifespan(app: FastAPI):
     except Exception as exc:  # noqa: BLE001
         logger.error("Health check error during startup: %s", exc)
 
+    # Start APScheduler for lock auto-release (T059)
+    try:
+        from app.services.scheduler import start_scheduler
+        start_scheduler()
+    except Exception as exc:
+        logger.error("APScheduler failed to start: %s", exc)
+
     logger.info("PA Evidence Assistant ready.")
 
     yield
 
     # Shutdown
+    from app.services.scheduler import shutdown_scheduler
+    shutdown_scheduler()
     from app.db.database import get_engine
     await get_engine().dispose()
     logger.info("PA Evidence Assistant shut down.")
@@ -132,6 +141,7 @@ def create_app() -> FastAPI:
     app.include_router(admin.router, prefix="/api/admin", tags=["admin"])
     app.include_router(policies.router, prefix="/api/policies", tags=["policies"])
     app.include_router(cases.router, prefix="/api/cases", tags=["cases"])
+    app.include_router(nurse_review.router, prefix="/api/nurse-review", tags=["nurse-review"])
 
     # Root health endpoint
     @app.get("/health", tags=["system"], summary="Application health probe")
