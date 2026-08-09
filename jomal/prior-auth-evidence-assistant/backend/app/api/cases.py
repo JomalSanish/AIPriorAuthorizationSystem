@@ -16,6 +16,7 @@ from app.db.models import Case, CaseDocument, CaseStatus, User, AuditLog, Policy
 from app.api.deps import get_current_user, require_role
 from app.agents.intake import intake_agent
 from app.agents.retrieval import retrieval_agent
+from app.agents.workflow import workflow_agent
 from app.services.minio import minio_service
 
 router = APIRouter()
@@ -248,16 +249,12 @@ async def submit_case(
     db.add(audit_submit)
     await db.commit()
     
-    # Generate case profile in background
-    background_tasks.add_task(generate_profile_task, str(case_id))
+    # Launch full automated pipeline as a background task (T057).
+    # run_pipeline manages its own DB session — the request session is already
+    # committed above, so there is no session sharing across the async boundary.
+    background_tasks.add_task(workflow_agent.run_pipeline, str(case_id))
     
     return {"id": case.id, "status": case.status.value}
-
-async def generate_profile_task(case_id: str):
-    from app.db.database import get_session_factory
-    async with get_session_factory()() as db:
-        await intake_agent.generate_case_profile(db, case_id)
-        await db.commit()
 
 
 @router.get("")

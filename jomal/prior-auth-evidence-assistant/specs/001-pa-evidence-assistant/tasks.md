@@ -476,7 +476,7 @@
 
 ### 7a. Audit Log Service
 
-- [ ] T053 [US7] Implement audit log service in `backend/app/services/audit.py`:
+- [x] T053 [US7] Implement audit log service in `backend/app/services/audit.py`:
   - `AuditService` class:
     - `log(trace_id, case_id, actor_type, actor_id, action, model_name=None, model_version=None, input_summary=None, output_summary=None, confidence_score=None, retrieval_score=None, llm_confidence=None, metadata=None)` — insert-only, never update/delete (FR-040e)
     - `get_case_audit_trail(case_id) → list[AuditEntry]` — chronological history for a case
@@ -486,7 +486,7 @@
 
 ### 7b. Workflow Agent — Planner
 
-- [ ] T054 [US3] Implement Workflow Agent planner in `backend/app/agents/workflow.py`:
+- [x] T054 [US3] Implement Workflow Agent planner in `backend/app/agents/workflow.py`:
   - `WorkflowAgent` class:
     - Action whitelist (enum): `call_intake_agent`, `call_retrieval_agent`, `call_reasoning_agent`, `call_summary_agent`, `request_additional_evidence`, `finalize_to_nurse_review`
     - `plan_next_action(case_id, case_state, action_history) → PlannedAction`:
@@ -500,7 +500,7 @@
       - The planner can NEVER emit anything resembling accept/reject — that action doesn't exist in the whitelist (FR-017, Constitution P1)
     - `PlannedAction`: dataclass with `action` (enum), `reasoning` (str), `turn_number` (int)
 
-- [ ] T055 [US3] Implement Workflow Agent execution loop in `backend/app/agents/workflow.py`:
+- [x] T055 [US3] Implement Workflow Agent execution loop in `backend/app/agents/workflow.py`:
   - `run_pipeline(case_id) → PipelineResult`:
     1. Generate trace_id for this pipeline run
     2. Load case state from Postgres
@@ -522,7 +522,7 @@
 
 ### 7c. Case Status State Machine
 
-- [ ] T056 [US3] Implement case status transitions in `backend/app/agents/workflow.py`:
+- [x] T056 [US3] Implement case status transitions in `backend/app/agents/workflow.py`:
   - Valid transitions:
     - `draft` → `processing` (on case submit)
     - `processing` → `pending_nurse_review` (pipeline complete)
@@ -538,7 +538,7 @@
 
 ### 7d. Pipeline Trigger
 
-- [ ] T057 [US3] Wire pipeline trigger into case submission in `backend/app/api/cases.py`:
+- [x] T057 [US3] Wire pipeline trigger into case submission in `backend/app/api/cases.py`:
   - After `POST /api/cases/{case_id}/submit` sets status to `processing`, launch `run_pipeline(case_id)` (T055) as a background task (`asyncio.create_task` or FastAPI `BackgroundTasks`)
   - Pipeline runs asynchronously — the submit endpoint returns immediately with status "Processing"
   - If Admin cancels/restarts an in-flight pipeline (FR-012a), the running task is cancelled and a new pipeline is started
