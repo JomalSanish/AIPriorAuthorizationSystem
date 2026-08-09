@@ -115,7 +115,7 @@
 
 ### 2a. MinIO Storage Layer
 
-- [ ] T018 Implement MinIO S3 client service in `backend/app/services/minio.py`:
+- [x] T018 Implement MinIO S3 client service in `backend/app/services/minio.py`:
   - `ensure_bucket(bucket_name)` — create bucket if not exists (e.g. `pa-case-documents`, `pa-policy-documents`)
   - `upload_file(bucket, object_key, file_bytes, content_type) → str` — returns object key
   - `download_file(bucket, object_key) → bytes`
@@ -126,17 +126,17 @@
 
 ### 2b. Document Parsers
 
-- [ ] T019 Implement PDF parser in `backend/app/services/document.py`:
+- [x] T019 Implement PDF parser in `backend/app/services/document.py`:
   - `parse_pdf(file_bytes) → list[PageResult]` — uses PyMuPDF; for each page: extract native text layer; if page has no extractable text (len(text.strip()) == 0), rasterize page to image at 300 DPI and flag for OCR
   - `PageResult`: dataclass with `page_number`, `text`, `needs_ocr`, `image_bytes` (nullable)
-- [ ] T020 Implement DOCX parser in `backend/app/services/document.py` (same file as T019 — sequential):
+- [x] T020 Implement DOCX parser in `backend/app/services/document.py` (same file as T019 — sequential):
   - `parse_docx(file_bytes) → str` — uses python-docx to extract all paragraph text
-- [ ] T021 Implement TXT/MD parser in `backend/app/services/document.py` (same file as T019/T020 — sequential):
+- [x] T021 Implement TXT/MD parser in `backend/app/services/document.py` (same file as T019/T020 — sequential):
   - `parse_text(file_bytes, encoding="utf-8") → str` — direct decode with encoding detection fallback
 
 ### 2c. Image Preprocessing Pipeline
 
-- [ ] T022 Implement OpenCV image preprocessing pipeline in `backend/app/services/ocr.py`:
+- [x] T022 Implement OpenCV image preprocessing pipeline in `backend/app/services/ocr.py`:
   - `preprocess_image(image_bytes) → np.ndarray` — sequential pipeline:
     1. Decode image bytes to numpy array
     2. Grayscale conversion (`cv2.cvtColor`)
@@ -149,7 +149,7 @@
 
 ### 2d. GPU Contention Guard
 
-- [ ] T023 Implement GPU contention guard in `backend/app/core/gpu_guard.py`:
+- [x] T023 Implement GPU contention guard in `backend/app/core/gpu_guard.py`:
   - `GpuGuard` class with:
     - `asyncio.Lock` for exclusive GPU access
     - Priority levels: `LLM` (highest), `EMBEDDING`, `OCR` (lowest)
@@ -161,7 +161,7 @@
 
 ### 2e. EasyOCR Integration
 
-- [ ] T024 Implement EasyOCR service in `backend/app/services/ocr.py`:
+- [x] T024 Implement EasyOCR service in `backend/app/services/ocr.py`:
   - `OcrService` class:
     - Lazy-initialized EasyOCR reader (loaded once, reused)
     - `ocr_image(image_bytes) → str` — preprocesses via T022, acquires GPU guard (T023) with OCR priority and configured timeout; if guard acquisition times out, falls back to `gpu=False` (CPU mode) per FR-046a
@@ -172,7 +172,7 @@
 
 ### 2f. Unified Document Processing
 
-- [ ] T025 Implement unified document processing service in `backend/app/services/document.py`:
+- [x] T025 Implement unified document processing service in `backend/app/services/document.py`:
   - `process_document(file_bytes, filename, file_type) → DocumentResult` — routes to appropriate parser (T019–T021) based on file_type; runs OCR (T024) on pages/images that need it; computes SHA-256 hash; returns `DocumentResult` with extracted_text, pages, ocr_status, sha256
   - `DocumentResult`: dataclass with `full_text`, `pages: list[PageText]`, `ocr_status` (not_needed/completed/failed), `sha256_hash`
   - Handles extraction failure: if zero text extracted from all pages/content, flags `ocr_status=failed` (FR-013a)
