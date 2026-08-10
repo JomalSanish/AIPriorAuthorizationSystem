@@ -205,6 +205,22 @@ class WorkflowAgent:
                 "plan_next_action | case=%s turn budget exhausted at turn %d",
                 case_id, turn_number,
             )
+            # FR-018 still applies even when the budget is blown: a case
+            # must never finalize without a summary. Force one last
+            # deterministic step (no LLM call) rather than finalizing
+            # straight away, so a run that wasted its turns elsewhere
+            # (e.g. looping on call_intake_agent) still produces a
+            # nurse-facing summary instead of silently finalizing empty.
+            if WorkflowAction.call_summary_agent.value not in action_history:
+                return PlannedAction(
+                    action=WorkflowAction.call_summary_agent,
+                    reasoning=(
+                        f"Turn budget ({self.DEFAULT_TURN_BUDGET}) exhausted, but no summary "
+                        "has been generated yet (FR-018) — forcing call_summary_agent before "
+                        "finalize."
+                    ),
+                    turn_number=turn_number,
+                )
             return PlannedAction(
                 action=WorkflowAction.finalize_to_nurse_review,
                 reasoning=f"Turn budget ({self.DEFAULT_TURN_BUDGET}) exhausted. Forcing finalize.",
@@ -284,6 +300,39 @@ class WorkflowAgent:
                 else WorkflowAction.call_summary_agent
             )
             reasoning = "Planner failed after retries — safe default chosen."
+
+        # Loop guard: call_intake_agent re-processes the same documents
+        # every time (re-parses, re-chunks, re-embeds, re-upserts) — it
+        # produces no new information on a repeat call within the same
+        # run, since no new documents can appear mid-pipeline. Observed in
+        # practice: the small planner LLM can get stuck re-selecting it
+        # turn after turn, burning the entire turn budget before
+        # call_summary_agent ever runs. Once it has run once this pipeline
+        # run, redirect toward the next real step instead of letting it
+        # repeat.
+        if (
+            chosen_action == WorkflowAction.call_intake_agent
+            and WorkflowAction.call_intake_agent.value in action_history
+        ):
+            if WorkflowAction.call_reasoning_agent.value not in action_history:
+                chosen_action = WorkflowAction.call_reasoning_agent
+                reasoning = (
+                    "Loop guard: call_intake_agent already ran this pipeline run "
+                    "(re-running it re-processes the same documents with no new "
+                    "information) — moving to call_reasoning_agent instead."
+                )
+            elif WorkflowAction.call_summary_agent.value not in action_history:
+                chosen_action = WorkflowAction.call_summary_agent
+                reasoning = (
+                    "Loop guard: call_intake_agent already ran this pipeline run — "
+                    "moving to call_summary_agent instead."
+                )
+            else:
+                chosen_action = WorkflowAction.finalize_to_nurse_review
+                reasoning = (
+                    "Loop guard: call_intake_agent already ran and reasoning/summary "
+                    "are both complete — finalizing."
+                )
 
         # Hard guardrail FR-018: cannot finalize before summary
         if chosen_action == WorkflowAction.finalize_to_nurse_review:
