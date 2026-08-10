@@ -33,7 +33,7 @@ jomal/
 | Project | Domain | Main Architecture | Current Focus |
 |---|---|---|---|
 | [Prior Authorization Evidence Assistant](./jomal/prior-auth-evidence-assistant/prior-auth-evidence-assistant-README.md) | Healthcare / Payer Operations | FastAPI + React + 5-agent RAG pipeline | Implemented application |
-| [Oncology Evidence Retrieval](./Oncology-Evidence-Retrieval/README.md) | Biomedical Research | Multi-agent evidence retrieval + provenance platform | Spec-Kit architecture/playbook |
+| [Oncology Evidence Retrieval](./jomal/Oncology-Evidence-Retrieval/Oncology-Evidence-Retrieval-README.md) | Biomedical Research | Multi-agent evidence retrieval + provenance platform | Spec-Kit architecture/playbook |
 
 ---
 
