@@ -2,7 +2,7 @@
 T088 + T089 — Offline Ragas RAG Evaluation Harness.
 
 ⚠️ IMPORTANT: This harness MUST use local Ollama + local TEI.
-   Never use OPENAI_API_KEY or any hosted API. (FR-044, locality constraint)
+   Never use OPENAI_API_KEY or any hosted API. (FR-044, locality constraint)  # noqa: locality
 
 T088: Ragas evaluation harness — Context Precision, Context Recall, Faithfulness
 T089: Isolation checks — no WorkflowAgent import, no live DB write, no PHI
@@ -47,11 +47,11 @@ logger = logging.getLogger("pa.evaluation")
 
 def _assert_no_openai_key():
     """T089: Ensure no OpenAI API key is present (locality enforcement)."""
-    key = os.environ.get("OPENAI_API_KEY", "")
+    key = os.environ.get("OPENAI_API_KEY", "")  # noqa: locality
     if key.strip():
         raise EnvironmentError(
-            "OPENAI_API_KEY is set — Ragas evaluation MUST use local Ollama. "
-            "Unset the key before running: del $env:OPENAI_API_KEY"
+            "OPENAI_API_KEY is set -- Ragas evaluation MUST use local Ollama. "  # noqa: locality
+            "Unset the key before running: del $env:OPENAI_API_KEY"  # noqa: locality
         )
 
 
@@ -398,14 +398,14 @@ def harness():
 # ---------------------------------------------------------------------------
 
 def test_t089_no_openai_key_required():
-    """T089: Evaluation harness must not require OPENAI_API_KEY."""
+    """T089: Evaluation harness must not require OPENAI_API_KEY."""  # noqa: locality
     # Should not raise if key is absent
-    saved = os.environ.pop("OPENAI_API_KEY", None)
+    saved = os.environ.pop("OPENAI_API_KEY", None)  # noqa: locality
     try:
         _assert_no_openai_key()  # should succeed with no key set
     finally:
         if saved:
-            os.environ["OPENAI_API_KEY"] = saved
+            os.environ["OPENAI_API_KEY"] = saved  # noqa: locality
 
 
 def test_t089_no_workflow_agent_import():

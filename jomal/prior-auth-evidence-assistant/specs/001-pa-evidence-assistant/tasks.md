@@ -830,7 +830,7 @@
 
 ### 11a. Startup Health-Check Sequence
 
-- [ ] T091 Implement orchestrated startup sequence in `backend/app/main.py` (lifespan handler):
+- [x] T091 Implement orchestrated startup sequence in `backend/app/main.py` (lifespan handler):
   - Boot order:
     1. Load settings from SecretsProvider
     2. Check Docker services: Postgres → Qdrant → TEI → MinIO (T017) — each with retry (3 attempts, 5s interval)
@@ -845,7 +845,7 @@
 
 ### 11b. Data Locality Enforcement Scan
 
-- [ ] T092 Create data-locality enforcement script in `backend/scripts/check_locality.py`:
+- [x] T092 Create data-locality enforcement script in `backend/scripts/check_locality.py`:
   - Static scan of all Python source files for prohibited patterns:
     - URLs containing: `api.openai.com`, `api.anthropic.com`, `api.cohere.com`, `generativelanguage.googleapis.com`, `api.mistral.ai`, `api.together.xyz`, `s3.amazonaws.com`, `storage.googleapis.com`
     - Environment variable references: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `COHERE_API_KEY`, `GOOGLE_API_KEY`
@@ -854,7 +854,7 @@
   - Exit code 0 if clean, exit code 1 with specific file:line references if violations found
   - Intended to run as a CI step or pre-commit hook
     > **⚠️ FLAG (external network)**: This script itself must NOT make any network calls. It is a pure static analysis / grep-based scan.
-- [ ] T093 Create startup documentation in `docker/README.md`:
+- [x] T093 Create startup documentation in `docker/README.md`:
   - Prerequisites: Docker Desktop, Python 3.11+, Node.js 18+, Ollama with llama3.2:3b pulled, CUDA drivers
   - Step 1: `docker compose up -d` in `docker/`
   - Step 2: Wait for health checks (provide `docker compose ps` expected output)

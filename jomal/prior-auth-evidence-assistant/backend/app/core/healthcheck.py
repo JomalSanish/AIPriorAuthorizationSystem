@@ -106,7 +106,7 @@ async def check_minio() -> HealthResult:
     Verify MinIO is reachable via boto3 (S3-compatible).
 
     ⚠️ endpoint_url MUST be set to the local MinIO URL — never falls back
-    to s3.amazonaws.com (FR-043, external network prohibition).
+    to s3.amazonaws.com (FR-043, external network prohibition).  # noqa: locality
     """
     settings = get_settings()
     try:
