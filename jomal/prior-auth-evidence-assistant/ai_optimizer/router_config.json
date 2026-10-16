@@ -1,0 +1,37 @@
+{
+  "presetId": "default",
+  "tiers": {
+    "economy": [
+      {
+        "modelId": "openai/gpt-oss-20b",
+        "providerId": "groq"
+      }
+    ],
+    "standard": [
+      {
+        "modelId": "openai/gpt-oss-120b",
+        "providerId": "groq"
+      }
+    ],
+    "advanced": [
+      {
+        "modelId": "qwen/qwen3.8-27b",
+        "providerId": "groq"
+      }
+    ]
+  },
+  "rules": {
+    "maxCharsForEconomy": 600,
+    "advancedKeywords": [
+      "analyze",
+      "architecture",
+      "debug",
+      "prove",
+      "refactor",
+      "step by step",
+      "trade-offs"
+    ],
+    "needsToolsMinTier": "standard",
+    "defaultTier": "standard"
+  }
+}

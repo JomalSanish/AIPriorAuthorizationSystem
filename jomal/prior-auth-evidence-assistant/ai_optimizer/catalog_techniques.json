@@ -1,0 +1,83 @@
+{
+  "selected": [
+    "whitespace-normalize",
+    "filler-removal",
+    "dedupe-sentences",
+    "cache-prefix-ordering",
+    "caveman-output",
+    "max-output-cap"
+  ],
+  "techniques": [
+    {
+      "id": "whitespace-normalize",
+      "mode": "rule",
+      "ruleId": "whitespace-normalize",
+      "order": 10,
+      "affects": "input",
+      "params": {}
+    },
+    {
+      "id": "filler-removal",
+      "mode": "rule",
+      "ruleId": "filler-removal",
+      "order": 20,
+      "affects": "input",
+      "params": {
+        "phrases": [
+          "please note that",
+          "it is important to note that",
+          "i would like you to",
+          "could you please",
+          "can you please",
+          "please",
+          "kindly",
+          "basically",
+          "actually",
+          "just",
+          "really",
+          "very",
+          "in order to",
+          "as an ai language model,",
+          "thank you in advance",
+          "thanks in advance"
+        ]
+      }
+    },
+    {
+      "id": "dedupe-sentences",
+      "mode": "rule",
+      "ruleId": "dedupe-sentences",
+      "order": 30,
+      "affects": "input",
+      "params": {}
+    },
+    {
+      "id": "cache-prefix-ordering",
+      "mode": "rule",
+      "ruleId": "cache-prefix-ordering",
+      "order": 40,
+      "affects": "input",
+      "params": {}
+    },
+    {
+      "id": "caveman-output",
+      "mode": "rule",
+      "ruleId": "caveman-output",
+      "order": 50,
+      "affects": "output",
+      "params": {
+        "instruction": "Respond tersely: no preamble, no restating the question, no filler. Use short fragments and lists when clear."
+      }
+    },
+    {
+      "id": "max-output-cap",
+      "mode": "rule",
+      "ruleId": "max-output-cap",
+      "order": 60,
+      "affects": "output",
+      "params": {
+        "maxTokens": 512
+      }
+    }
+  ]
+}
